@@ -2,3 +2,4 @@ scarb 2.16.1
 starknet-foundry 0.57.0
 noir 1.0.0-beta.16
 starknet-devnet 0.9.2
+rust 1.95.0
