@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# check the staged files (what gets committed)
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+git checkout-index -a --prefix="$tmp/"
+
+if ! out=$(make -C "$tmp" fmt-check 2>&1); then
+    echo "$out"
+    echo
+    echo "pre-commit: Code is not formatted. Run 'make fmt', then 'git add' the changes."
+    exit 1
+fi

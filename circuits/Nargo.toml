@@ -1,0 +1,5 @@
+[package]
+name = "zth"
+type = "bin"
+
+[dependencies]
