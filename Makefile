@@ -50,7 +50,7 @@ devnet:
 	starknet-devnet --seed 0
 
 CIRCUIT_SRC := $(shell find circuits/src -name '*.nr') circuits/Nargo.toml circuits/Prover.toml
-FIXTURE := verifier/tests/proof_calldata.txt
+FIXTURE := contracts/verifier/tests/proof_calldata.txt
 
 # regenerated and tested only when the circuit changes.
 # force: make -B verifier
@@ -60,20 +60,20 @@ verifier: $(FIXTURE)
 
 $(FIXTURE): $(CIRCUIT_SRC)
 	cd circuits && nargo execute witness
-	cd circuits && bb write_vk -s ultra_honk --oracle_hash keccak -b target/zth.json -o target/
-	cd circuits && bb prove -s ultra_honk --oracle_hash keccak -b target/zth.json -w target/witness.gz -o target/
-	rm -rf verifier
-	garaga gen --system ultra_keccak_zk_honk --vk circuits/target/vk --project-name verifier
+	cd circuits && bb write_vk -s ultra_honk --oracle_hash keccak -b target/login.json -o target/
+	cd circuits && bb prove -s ultra_honk --oracle_hash keccak -b target/login.json -w target/witness.gz -o target/
+	rm -rf contracts/verifier
+	cd contracts && garaga gen --system ultra_keccak_zk_honk --vk ../circuits/target/vk --project-name verifier
 	garaga calldata --system ultra_keccak_zk_honk --vk circuits/target/vk --proof circuits/target/proof \
-		--public-inputs circuits/target/public_inputs --format snforge --output-path verifier/tests
-	cd verifier && snforge test
+		--public-inputs circuits/target/public_inputs --format snforge --output-path contracts/verifier/tests
+	cd contracts && snforge test --package verifier
 
 build: verifier
-	cd contracts && scarb build
+	cd contracts && scarb build --package account
 	cd circuits && nargo compile
 
 test: verifier
-	cd contracts && scarb test
+	cd contracts && scarb test --package account
 	cd circuits && nargo test
 
 fmt:
@@ -86,4 +86,4 @@ fmt-check:
 
 clean:
 	cd contracts && scarb clean
-	rm -rf circuits/target contracts/.snfoundry_cache verifier
+	rm -rf circuits/target contracts/.snfoundry_cache contracts/verifier

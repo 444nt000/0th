@@ -1,5 +1,5 @@
 #[starknet::contract]
-mod zth {
+mod account {
     #[storage]
     struct Storage {}
 }

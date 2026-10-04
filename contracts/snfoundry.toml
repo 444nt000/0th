@@ -1,0 +1,3 @@
+[sncast.devnet]
+network = "devnet"
+account = "devnet-1"
