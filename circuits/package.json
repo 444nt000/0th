@@ -1,0 +1,16 @@
+{
+  "name": "circuits",
+  "license": "GPL-3.0",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.13.1",
+      "onFail": "download"
+    }
+  },
+  "type": "module",
+  "dependencies": {
+    "noir-jwt": "^0.4.5"
+  },
+  "private": true
+}
