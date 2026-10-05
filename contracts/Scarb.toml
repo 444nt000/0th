@@ -10,4 +10,3 @@ test = "snforge test"
 
 [cairo]
 sierra-replace-ids = false
-inlining-strategy = 2
