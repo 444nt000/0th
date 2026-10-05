@@ -15,11 +15,14 @@ setup:
 	-asdf plugin add starknet-foundry 2> /dev/null
 	-asdf plugin add noir $(NOIR_PLUGIN) 2> /dev/null
 	-asdf plugin add starknet-devnet 2> /dev/null
+	-asdf plugin add nodejs 2> /dev/null
+	-asdf plugin add pnpm 2> /dev/null
 	asdf install
 	bbup -v $(BB_VERSION)
 	uv tool install --force --python 3.12 garaga==$(GARAGA_VERSION) --with fastecdsa==3.0.1
 	curl -fsSL https://github.com/software-mansion/universal-sierra-compiler/releases/download/v$(USC_VERSION)/$(USC).tar.gz \
 		| tar -xz -C $(HOME)/.local/bin --strip-components=2 $(USC)/bin/universal-sierra-compiler
+	cd circuits && pnpm install --frozen-lockfile
 	git config core.hooksPath .githooks
 	@$(MAKE) --no-print-directory versions
 
@@ -38,6 +41,8 @@ versions:
 	$(call expect,sncast,sncast --version,$(call pin,starknet-foundry))
 	$(call expect,nargo,nargo --version,$(call pin,noir))
 	$(call expect,starknet-devnet,starknet-devnet --version,$(call pin,starknet-devnet))
+	$(call expect,node,node --version,$(call pin,nodejs))
+	$(call expect,pnpm,pnpm --version,$(call pin,pnpm))
 	$(call expect,bb,bb --version,$(BB_VERSION))
 	$(call expect,universal-sierra-compiler,universal-sierra-compiler --version,$(USC_VERSION))
 	$(call expect,garaga,garaga --help > /dev/null 2>&1 && uv tool list | grep '^garaga ',$(GARAGA_VERSION))
