@@ -10,3 +10,4 @@ contracts/coverage/
 contracts/profile/
 node_modules/
 circuits/Bad_*.toml
+circuits/Real.*
