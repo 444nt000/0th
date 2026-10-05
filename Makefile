@@ -79,6 +79,15 @@ build: verifier
 test: verifier
 	cd contracts && scarb test --package account
 	cd circuits && nargo test
+	# letters signed correctly but with a wrong claim: each must fail on its own assert
+	cd circuits && node scripts/fixture.ts Bad_iss http://test.com
+	cd circuits && nargo execute --prover-name Bad_iss 2>&1 | grep -q "incorrect value for claim"
+	cd circuits && node scripts/fixture.ts Bad_nonce https://accounts.google.com 123123123
+	cd circuits && nargo execute --prover-name Bad_nonce 2>&1 | grep -q "nonce does not match the session key"
+	# valid letter, decoding started 4 bytes into the payload
+	awk -F'"' '/^base64_decode_offset/ { print "base64_decode_offset = \"" $$2 + 4 "\""; next } 1' circuits/Prover.toml > circuits/Bad_offset.toml
+	cd circuits && nargo execute --prover-name Bad_offset 2>&1 | grep -q "decode must start at the payload"
+	rm -f circuits/Bad_iss.toml circuits/Bad_nonce.toml circuits/Bad_offset.toml
 
 fmt:
 	cd contracts && scarb fmt
