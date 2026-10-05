@@ -7,8 +7,6 @@ USC_VERSION := 2.10.1
 NOIR_PLUGIN := https://github.com/444nt000/asdf-noir.git
 
 pin = $(shell awk '$$1 == "$(1)" { print $$2 }' .tool-versions)
-# scarb runs cargo from its cache dir, outside this .tool-versions
-export ASDF_RUST_VERSION := $(call pin,rust)
 USC := universal-sierra-compiler-v$(USC_VERSION)-$(shell uname -m)-$(if $(filter Darwin,$(shell uname)),apple-darwin,unknown-linux-gnu)
 
 # install the pinned toolchain. needs asdf, bbup, uv.
@@ -17,7 +15,6 @@ setup:
 	-asdf plugin add starknet-foundry 2> /dev/null
 	-asdf plugin add noir $(NOIR_PLUGIN) 2> /dev/null
 	-asdf plugin add starknet-devnet 2> /dev/null
-	-asdf plugin add rust 2> /dev/null
 	asdf install
 	bbup -v $(BB_VERSION)
 	uv tool install --force --python 3.12 garaga==$(GARAGA_VERSION) --with fastecdsa==3.0.1
@@ -41,7 +38,6 @@ versions:
 	$(call expect,sncast,sncast --version,$(call pin,starknet-foundry))
 	$(call expect,nargo,nargo --version,$(call pin,noir))
 	$(call expect,starknet-devnet,starknet-devnet --version,$(call pin,starknet-devnet))
-	$(call expect,cargo,cargo --version,$(call pin,rust))
 	$(call expect,bb,bb --version,$(BB_VERSION))
 	$(call expect,universal-sierra-compiler,universal-sierra-compiler --version,$(USC_VERSION))
 	$(call expect,garaga,garaga --help > /dev/null 2>&1 && uv tool list | grep '^garaga ',$(GARAGA_VERSION))
@@ -64,6 +60,9 @@ $(FIXTURE): $(CIRCUIT_SRC)
 	cd circuits && bb prove -s ultra_honk --oracle_hash keccak -b target/login.json -w target/witness.gz -o target/
 	rm -rf contracts/verifier
 	cd contracts && garaga gen --system ultra_keccak_zk_honk --vk ../circuits/target/vk --project-name verifier
+	# drop the generated [cairo], the workspace root already sets it (scarb only reads it there)
+	sed -i.bak '/^\[cairo\]/,/^$$/d' contracts/verifier/Scarb.toml && rm contracts/verifier/Scarb.toml.bak
+	printf '\n[scripts]\ntest.workspace = true\n\n[tool]\nscarb.workspace = true\n' >> contracts/verifier/Scarb.toml
 	garaga calldata --system ultra_keccak_zk_honk --vk circuits/target/vk --proof circuits/target/proof \
 		--public-inputs circuits/target/public_inputs --format snforge --output-path contracts/verifier/tests
 	cd contracts && snforge test --package verifier

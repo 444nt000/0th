@@ -1,2 +1,13 @@
 [workspace]
 members = ["account", "verifier"]
+
+# load snforge's prebuilt plugin instead of compiling it with cargo
+[workspace.tool.scarb]
+allow-prebuilt-plugins = ["snforge_std"]
+
+[workspace.scripts]
+test = "snforge test"
+
+[cairo]
+sierra-replace-ids = false
+inlining-strategy = 2
