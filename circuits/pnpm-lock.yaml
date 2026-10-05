@@ -200,12 +200,20 @@ importers:
       noir-jwt:
         specifier: ^0.4.5
         version: 0.4.5
+      poseidon-lite:
+        specifier: ^0.3.0
+        version: 0.3.0
 
 packages:
 
   noir-jwt@0.4.5:
     resolution: {integrity: sha512-7v3wj/Www6ebtkcjpDahCRMlCeAOHys1r0BPYBX45pJ1UiogXL3mNsWc2LPeKn7/2gw+nnF4D9liS9t21MiOjg==}
 
+  poseidon-lite@0.3.0:
+    resolution: {integrity: sha512-ilJj4MIve4uBEG7SrtPqUUNkvpJ/pLVbndxa0WvebcQqeIhe+h72JR4g0EvwchUzm9sOQDlOjiDNmRAgxNZl4A==}
+
 snapshots:
 
   noir-jwt@0.4.5: {}
+
+  poseidon-lite@0.3.0: {}
