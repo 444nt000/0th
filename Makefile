@@ -79,10 +79,12 @@ build: verifier
 test: verifier
 	cd contracts && scarb test --package account
 	cd circuits && nargo test
-	# letters signed correctly but with a wrong claim: each must fail on its own assert
+	# each bad input must fail on its own assert
+	# letter signed correctly, but iss is not Google
 	cd circuits && node scripts/fixture.ts Bad_iss http://test.com
 	cd circuits && nargo execute --prover-name Bad_iss 2>&1 | grep -q "incorrect value for claim"
-	cd circuits && node scripts/fixture.ts Bad_nonce https://accounts.google.com 123123123
+	# valid letter, expiry stretched past the one its nonce approves
+	awk -F'"' '/^expiry/ { print "expiry = \"" $$2 + 1 "\""; next } 1' circuits/Prover.toml > circuits/Bad_nonce.toml
 	cd circuits && nargo execute --prover-name Bad_nonce 2>&1 | grep -q "nonce does not match the session key"
 	# valid letter, decoding started 4 bytes into the payload
 	awk -F'"' '/^base64_decode_offset/ { print "base64_decode_offset = \"" $$2 + 4 "\""; next } 1' circuits/Prover.toml > circuits/Bad_offset.toml

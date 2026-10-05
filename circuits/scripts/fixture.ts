@@ -6,13 +6,14 @@ import { createRequire } from "module";
 // noir-jwt 0.4.5's ESM build has extensionless imports Node cannot resolve, so load its CommonJS build
 const { generateInputs } = createRequire(import.meta.url)("noir-jwt");
 
-const SALT = 12345;
+const SALT = 12345n; // fixed for experiments, the real one comes from the dev's salt endpoint
 const EXPIRY = 1800000000n; // session expiry, a Starknet timestamp
 const GOOGLE_ISS = "https://accounts.google.com";
 const digits = (n: number) =>
   Array.from(crypto.randomBytes(n), (b) => b % 10).join("");
+const felt = () => BigInt("0x" + crypto.randomBytes(31).toString("hex"));
 
-async function createKeyAndSignData(iss: string, nonce: string) {
+function createKeyAndSignData(iss: string, nonce: string) {
   // Fresh RSA key, same shape as Google's (2048-bit, exponent 65537)
   const { privateKey, publicKey } = crypto.generateKeyPairSync("rsa", {
     modulusLength: 2048,
@@ -43,7 +44,7 @@ async function createKeyAndSignData(iss: string, nonce: string) {
   // Convert public key to JWK
   const pubkeyJwk = publicKey.export({ format: "jwk" });
 
-  return { pubkeyJwk, jwt };
+  return { pubkeyJwk, jwt, payload };
 }
 
 // Same as `pack` in src/main.nr: 31 bytes per field, big-endian, zero-padded to max
@@ -55,115 +56,51 @@ const pack = (s: string, max: number) => {
   );
 };
 
-// Stand-in for the session public key (a random 31-byte felt, not a real Stark key), and the secret
-const felt = () => BigInt("0x" + crypto.randomBytes(31).toString("hex"));
-// the nonce the browser sends to Google: Poseidon(session key, expiry, secret) in decimal
-const nonceOf = (sessionPubkey: bigint, secret: bigint) =>
-  poseidon3([sessionPubkey, EXPIRY, secret]).toString();
+// usage: node scripts/fixture.ts [prover name] [iss]
+//   e.g. `Bad_iss http://test.com` writes Bad_iss.toml, a letter for a test that must fail
+const [name = "Prover", iss = GOOGLE_ISS] = process.argv.slice(2);
 
-// Write a letter and its session as circuit inputs, in the layout `nargo check` generates
-async function writeProverToml(
-  name: string,
-  jwt: string,
-  pubkeyJwk: JsonWebKey,
-  sessionPubkey: bigint,
-  secret: bigint,
-) {
-  const { aud, sub } = JSON.parse(
-    Buffer.from(jwt.split(".")[1], "base64url").toString(),
-  );
+// Browser side: a stand-in session public key (a random felt, not a real Stark key) and the secret.
+// The nonce sent to Google is Poseidon(session key, expiry, secret) in decimal
+const sessionPubkey = felt();
+const secret = felt();
+const nonce = poseidon3([sessionPubkey, EXPIRY, secret]).toString();
 
-  // Expected circuit output: `nargo execute` fails if the circuit's identity_hash differs from this one
-  const identityHash = poseidon8([
-    ...pack(GOOGLE_ISS, 31),
-    ...pack(aud, 93),
-    BigInt(aud.length),
-    ...pack(sub, 31),
-    BigInt(sub.length),
-    BigInt(SALT),
-  ]);
+const { pubkeyJwk, jwt, payload } = createKeyAndSignData(iss, nonce);
 
-  const inputs = await generateInputs({
-    jwt,
-    pubkey: pubkeyJwk,
-    maxSignedDataLength: 1024, // MAX_DATA_LENGTH in src/main.nr
-  });
+// Expected circuit output: `nargo execute` fails if the circuit's identity_hash differs from this one
+const identityHash = poseidon8([
+  ...pack(GOOGLE_ISS, 31),
+  ...pack(payload.aud, 93),
+  BigInt(payload.aud.length),
+  ...pack(payload.sub, 31),
+  BigInt(payload.sub.length),
+  SALT,
+]);
 
-  const arr = (xs: unknown[]) => JSON.stringify(xs.map(String));
-  const toml = [
-    `base64_decode_offset = "${inputs.base64_decode_offset}"`,
-    `pubkey_modulus_limbs = ${arr(inputs.pubkey_modulus_limbs)}`,
-    `redc_params_limbs = ${arr(inputs.redc_params_limbs)}`,
-    `signature_limbs = ${arr(inputs.signature_limbs)}`,
-    `session_pubkey = "${sessionPubkey}"`,
-    `expiry = "${EXPIRY}"`,
-    `secret = "${secret}"`,
-    `salt = "${SALT}"`, // fixed for experiments, the real one comes from the dev's salt endpoint
-    `return = "${identityHash}"`,
-    "",
-    "[data]",
-    `len = "${inputs.data!.len}"`,
-    `storage = ${arr(inputs.data!.storage)}`,
-    "",
-  ].join("\n");
+const inputs = await generateInputs({
+  jwt,
+  pubkey: pubkeyJwk,
+  maxSignedDataLength: 1024, // MAX_DATA_LENGTH in src/main.nr
+});
 
-  fs.writeFileSync(new URL(`../${name}.toml`, import.meta.url), toml);
-}
+// Circuit inputs, in the layout `nargo check` generates
+const arr = (xs: unknown[]) => JSON.stringify(xs.map(String));
+const toml = [
+  `base64_decode_offset = "${inputs.base64_decode_offset}"`,
+  `pubkey_modulus_limbs = ${arr(inputs.pubkey_modulus_limbs)}`,
+  `redc_params_limbs = ${arr(inputs.redc_params_limbs)}`,
+  `signature_limbs = ${arr(inputs.signature_limbs)}`,
+  `session_pubkey = "${sessionPubkey}"`,
+  `expiry = "${EXPIRY}"`,
+  `secret = "${secret}"`,
+  `salt = "${SALT}"`,
+  `return = "${identityHash}"`,
+  "",
+  "[data]",
+  `len = "${inputs.data.len}"`,
+  `storage = ${arr(inputs.data.storage)}`,
+  "",
+].join("\n");
 
-// usage:
-//   node scripts/fixture.ts [prover name] [iss] [nonce]  test letter, e.g. a bad-iss letter for a test that must fail
-//   node scripts/fixture.ts real                         new session, prints the nonce to send to Google
-//   node scripts/fixture.ts real <id_token>              real Google letter for that session, writes Real.toml
-// Real.json and Real.toml hold a real Google sub: gitignored, delete after use
-const [cmd, ...args] = process.argv.slice(2);
-const session = new URL("../Real.json", import.meta.url);
-if (cmd === "real" && !args[0]) {
-  const sessionPubkey = felt();
-  const secret = felt();
-  fs.writeFileSync(
-    session,
-    JSON.stringify({
-      sessionPubkey: String(sessionPubkey),
-      secret: String(secret),
-    }),
-  );
-  console.log(nonceOf(sessionPubkey, secret));
-} else if (cmd === "real") {
-  const jwt = args[0];
-  const { sessionPubkey, secret } = JSON.parse(
-    fs.readFileSync(session, "utf8"),
-  );
-  // Google's key for this letter, picked by the `kid` in its header
-  const { kid } = JSON.parse(
-    Buffer.from(jwt.split(".")[0], "base64url").toString(),
-  );
-  const { keys } = await (
-    await fetch("https://www.googleapis.com/oauth2/v3/certs")
-  ).json();
-  const pubkeyJwk = keys.find(
-    (k: JsonWebKey & { kid: string }) => k.kid === kid,
-  );
-  if (!pubkeyJwk) throw new Error(`kid ${kid} not in Google's current keys`);
-  await writeProverToml(
-    "Real",
-    jwt,
-    pubkeyJwk,
-    BigInt(sessionPubkey),
-    BigInt(secret),
-  );
-} else {
-  const [name = "Prover", iss = GOOGLE_ISS, badNonce] = [cmd, ...args];
-  const sessionPubkey = felt();
-  const secret = felt();
-  const { pubkeyJwk, jwt } = await createKeyAndSignData(
-    iss,
-    badNonce ?? nonceOf(sessionPubkey, secret),
-  );
-  await writeProverToml(
-    name,
-    jwt,
-    pubkeyJwk as JsonWebKey,
-    sessionPubkey,
-    secret,
-  );
-}
+fs.writeFileSync(new URL(`../${name}.toml`, import.meta.url), toml);
