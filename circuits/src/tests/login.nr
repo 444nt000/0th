@@ -54,3 +54,13 @@ fn rejects_shifted_offset() {
     // log in with decoding started 4 bytes into the payload (must panic)
     let _ = login(GOOGLE, EXPIRY, GOOGLE.base64_decode_offset + 4);
 }
+
+#[test(should_fail_with = "Attempted to read past end of BoundedVec")]
+fn rejects_offset_past_data() {
+    // plant a "." after the signed data
+    let mut letter = GOOGLE;
+    letter.data[GOOGLE.data_len + 4] = 46;
+
+    // log in with decoding started right after the planted "." (must panic)
+    let _ = login(letter, EXPIRY, GOOGLE.data_len + 5);
+}

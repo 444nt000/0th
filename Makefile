@@ -88,10 +88,12 @@ test: verifier
 fmt:
 	cd contracts && scarb fmt
 	cd circuits && nargo fmt
+	cd circuits && pnpm exec prettier --write scripts
 
 fmt-check:
 	cd contracts && scarb fmt --check
 	cd circuits && nargo fmt --check
+	cd circuits && pnpm exec prettier --check scripts
 
 clean:
 	cd contracts && scarb clean

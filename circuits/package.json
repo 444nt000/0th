@@ -13,5 +13,9 @@
     "noir-jwt": "^0.4.5",
     "poseidon-lite": "^0.3.0"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "prettier": "^3.9.9"
+  }
 }
