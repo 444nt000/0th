@@ -1,4 +1,4 @@
-.PHONY: setup versions devnet verifier build test fmt fmt-check clean
+.PHONY: setup versions devnet fixtures verifier build test fmt fmt-check clean
 .DEFAULT_GOAL := build
 
 BB_VERSION := 3.0.0-nightly.20251104
@@ -50,7 +50,12 @@ versions:
 devnet:
 	starknet-devnet --seed 0
 
-CIRCUIT_SRC := $(shell find circuits/src -name '*.nr') circuits/Nargo.toml circuits/Prover.toml
+# writes circuits/Prover.toml and circuits/src/tests/fixtures.nr from the committed test key.
+# deterministic: rerun only after changing scripts/fixture.ts or the key.
+fixtures:
+	cd circuits && node scripts/fixture.ts && nargo fmt
+
+CIRCUIT_SRC := $(shell find circuits/src -name '*.nr' -not -path 'circuits/src/tests*') circuits/Nargo.toml circuits/Prover.toml
 FIXTURE := contracts/verifier/tests/proof_calldata.txt
 
 # regenerated and tested only when the circuit changes.
@@ -79,17 +84,6 @@ build: verifier
 test: verifier
 	cd contracts && scarb test --package account
 	cd circuits && nargo test
-	# each bad input must fail on its own assert
-	# letter signed correctly, but iss is not Google
-	cd circuits && node scripts/fixture.ts Bad_iss http://test.com
-	cd circuits && nargo execute --prover-name Bad_iss 2>&1 | grep -q "incorrect value for claim"
-	# valid letter, expiry stretched past the one its nonce approves
-	awk -F'"' '/^expiry/ { print "expiry = \"" $$2 + 1 "\""; next } 1' circuits/Prover.toml > circuits/Bad_nonce.toml
-	cd circuits && nargo execute --prover-name Bad_nonce 2>&1 | grep -q "nonce does not match the session key"
-	# valid letter, decoding started 4 bytes into the payload
-	awk -F'"' '/^base64_decode_offset/ { print "base64_decode_offset = \"" $$2 + 4 "\""; next } 1' circuits/Prover.toml > circuits/Bad_offset.toml
-	cd circuits && nargo execute --prover-name Bad_offset 2>&1 | grep -q "decode must start at the payload"
-	rm -f circuits/Bad_iss.toml circuits/Bad_nonce.toml circuits/Bad_offset.toml
 
 fmt:
 	cd contracts && scarb fmt
