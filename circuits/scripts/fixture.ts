@@ -1,53 +1,30 @@
-import crypto from "crypto";
-import fs from "fs";
-import { poseidon3, poseidon8 } from "poseidon-lite";
-import { createRequire } from "module";
+// Builds fake Google letters (JWTs) and writes them as circuit inputs. Tests only.
+// They are signed by a test key: the circuit accepts any RSA key, the contract checks it is Google's.
+// RS256 is deterministic, so a rerun writes the same files.
+//
+// usage: make fixtures
+//   Prover.toml            a valid letter, for `nargo execute` and the verifier proof
+//   src/tests/fixtures.nr  letters and constants for src/tests/
 
-// noir-jwt 0.4.5's ESM build has extensionless imports Node cannot resolve, so load its CommonJS build
+import crypto from "node:crypto";
+import fs from "node:fs";
+import { createRequire } from "node:module";
+import { poseidon3, poseidon8 } from "poseidon-lite";
+
+// noir-jwt 0.4.5's ESM build breaks in Node (extensionless imports), so load its CommonJS build
 const { generateInputs } = createRequire(import.meta.url)("noir-jwt");
 
-const SALT = 12345n; // fixed for experiments, the real one comes from the dev's salt endpoint
-const EXPIRY = 1800000000n; // session expiry, a Starknet timestamp
 const GOOGLE_ISS = "https://accounts.google.com";
-const digits = (n: number) =>
-  Array.from(crypto.randomBytes(n), (b) => b % 10).join("");
-const felt = () => BigInt("0x" + crypto.randomBytes(31).toString("hex"));
+const CLIENT_ID =
+  "123456789012-0123456789abcdef0123456789abcdef.apps.googleusercontent.com";
+const SUB = "123456789012345678901"; // Google ids are 21 digits
+const SESSION_PUBKEY = 1n; // any Field works: the circuit only hashes it
+const SECRET = 2n;
+const EXPIRY = 1800000000n; // Unix seconds (2027-01-15)
+const SALT = 12345n; // the real one comes from the dev's server
+const MAX_DATA_LENGTH = 1024; // same as in src/main.nr
 
-function createKeyAndSignData(iss: string, nonce: string) {
-  // Fresh RSA key, same shape as Google's (2048-bit, exponent 65537)
-  const { privateKey, publicKey } = crypto.generateKeyPairSync("rsa", {
-    modulusLength: 2048,
-    publicExponent: 65537,
-  });
-
-  // Google-shaped payload for scope "openid" only (no email, no profile): claim order and formats as Google sends them
-  const clientId = `${digits(12)}-${crypto.randomBytes(16).toString("hex")}.apps.googleusercontent.com`;
-  const payload = {
-    iss,
-    azp: clientId,
-    aud: clientId,
-    sub: digits(21),
-    nonce,
-    nbf: 1737641917,
-    iat: 1737642217,
-    exp: 1799999999, // 2027-01-15T07:59:59.000Z
-    jti: crypto.randomBytes(20).toString("hex"),
-  };
-
-  // Sign the payload: RS256 is RSA PKCS#1 v1.5 over SHA-256 of "header.payload"
-  const b64 = (o: object) =>
-    Buffer.from(JSON.stringify(o)).toString("base64url");
-  const signedData = `${b64({ alg: "RS256", kid: crypto.randomBytes(20).toString("hex"), typ: "JWT" })}.${b64(payload)}`;
-  const signature = crypto.sign("sha256", Buffer.from(signedData), privateKey);
-  const jwt = `${signedData}.${signature.toString("base64url")}`;
-
-  // Convert public key to JWK
-  const pubkeyJwk = publicKey.export({ format: "jwk" });
-
-  return { pubkeyJwk, jwt, payload };
-}
-
-// Same as `pack` in src/main.nr: 31 bytes per field, big-endian, zero-padded to max
+// Same as `pack` in src/main.nr: 31 bytes per Field, padded with 0 bytes
 const pack = (s: string, max: number) => {
   const bytes = Buffer.alloc(max);
   Buffer.from(s).copy(bytes);
@@ -56,51 +33,118 @@ const pack = (s: string, max: number) => {
   );
 };
 
-// usage: node scripts/fixture.ts [prover name] [iss]
-//   e.g. `Bad_iss http://test.com` writes Bad_iss.toml, a letter for a test that must fail
-const [name = "Prover", iss = GOOGLE_ISS] = process.argv.slice(2);
+// Browser side: nonce = H(session key, expiry, secret), in decimal
+const nonce = poseidon3([SESSION_PUBKEY, EXPIRY, SECRET]).toString();
 
-// Browser side: a stand-in session public key (a random felt, not a real Stark key) and the secret.
-// The nonce sent to Google is Poseidon(session key, expiry, secret) in decimal
-const sessionPubkey = felt();
-const secret = felt();
-const nonce = poseidon3([sessionPubkey, EXPIRY, secret]).toString();
+// Google side: a test key shaped like Google's (2048 bits, exponent 65537)
+const privateKey = crypto.createPrivateKey(
+  fs.readFileSync(new URL("../fixtures/test_rsa_key.pem", import.meta.url)),
+);
+const publicKey = crypto.createPublicKey(privateKey);
 
-const { pubkeyJwk, jwt, payload } = createKeyAndSignData(iss, nonce);
+// Google side: signs "header.payload" with RS256, like a real Google JWT
+function sign(iss: string) {
+  // Same claims, order and formats as Google's for scope "openid"
+  const payload = {
+    iss,
+    azp: CLIENT_ID,
+    aud: CLIENT_ID,
+    sub: SUB,
+    nonce,
+    nbf: 1737641917,
+    iat: 1737642217,
+    exp: 1799999999, // 2027-01-15
+    jti: "0123456789abcdef0123456789abcdef01234567", // keep last: login.nr tampers with it
+  };
+  const header = {
+    alg: "RS256",
+    kid: "0123456789abcdef0123456789abcdef01234567",
+    typ: "JWT",
+  };
+  const b64 = (o: object) =>
+    Buffer.from(JSON.stringify(o)).toString("base64url");
+  const signedData = `${b64(header)}.${b64(payload)}`;
+  const signature = crypto.sign("sha256", Buffer.from(signedData), privateKey);
+  return `${signedData}.${signature.toString("base64url")}`;
+}
 
-// Expected circuit output: `nargo execute` fails if the circuit's identity_hash differs from this one
+// Expected circuit output, same layout as `identity_hash` in src/main.nr
 const identityHash = poseidon8([
   ...pack(GOOGLE_ISS, 31),
-  ...pack(payload.aud, 93),
-  BigInt(payload.aud.length),
-  ...pack(payload.sub, 31),
-  BigInt(payload.sub.length),
+  ...pack(CLIENT_ID, 93),
+  BigInt(CLIENT_ID.length),
+  ...pack(SUB, 31),
+  BigInt(SUB.length),
   SALT,
 ]);
 
-const inputs = await generateInputs({
-  jwt,
-  pubkey: pubkeyJwk,
-  maxSignedDataLength: 1024, // MAX_DATA_LENGTH in src/main.nr
-});
+// Circuit inputs for one letter, computed by noir-jwt
+const letter = (iss: string) =>
+  generateInputs({
+    jwt: sign(iss),
+    pubkey: publicKey.export({ format: "jwk" }),
+    maxSignedDataLength: MAX_DATA_LENGTH,
+  });
 
-// Circuit inputs, in the layout `nargo check` generates
+const google = await letter(GOOGLE_ISS);
+// signed correctly, but iss is not Google
+const otherIss = await letter("http://test.com");
+
+// Prover.toml: the valid letter
 const arr = (xs: unknown[]) => JSON.stringify(xs.map(String));
-const toml = [
-  `base64_decode_offset = "${inputs.base64_decode_offset}"`,
-  `pubkey_modulus_limbs = ${arr(inputs.pubkey_modulus_limbs)}`,
-  `redc_params_limbs = ${arr(inputs.redc_params_limbs)}`,
-  `signature_limbs = ${arr(inputs.signature_limbs)}`,
-  `session_pubkey = "${sessionPubkey}"`,
+const prover = [
+  `base64_decode_offset = "${google.base64_decode_offset}"`,
+  `pubkey_modulus_limbs = ${arr(google.pubkey_modulus_limbs)}`,
+  `redc_params_limbs = ${arr(google.redc_params_limbs)}`,
+  `signature_limbs = ${arr(google.signature_limbs)}`,
+  `session_pubkey = "${SESSION_PUBKEY}"`,
   `expiry = "${EXPIRY}"`,
-  `secret = "${secret}"`,
+  `secret = "${SECRET}"`,
   `salt = "${SALT}"`,
   `return = "${identityHash}"`,
   "",
   "[data]",
-  `len = "${inputs.data.len}"`,
-  `storage = ${arr(inputs.data.storage)}`,
+  `len = "${google.data.len}"`,
+  `storage = ${arr(google.data.storage)}`,
   "",
 ].join("\n");
+fs.writeFileSync(new URL("../Prover.toml", import.meta.url), prover);
 
-fs.writeFileSync(new URL(`../${name}.toml`, import.meta.url), toml);
+// One `Letter` value, in Noir
+const nrLetter = (
+  name: string,
+  l: typeof google,
+) => `pub global ${name}: Letter = Letter {
+    data: [${l.data.storage.join(", ")}],
+    data_len: ${l.data.len},
+    base64_decode_offset: ${l.base64_decode_offset},
+    pubkey_modulus_limbs: [${l.pubkey_modulus_limbs.join(", ")}],
+    redc_params_limbs: [${l.redc_params_limbs.join(", ")}],
+    signature_limbs: [${l.signature_limbs.join(", ")}],
+};
+`;
+const fixtures = `// Generated by scripts/fixture.ts (make fixtures), do not edit
+use crate::MAX_DATA_LENGTH;
+
+// A signed letter, as circuit inputs
+pub struct Letter {
+    pub data: [u8; MAX_DATA_LENGTH],
+    pub data_len: u32,
+    pub base64_decode_offset: u32,
+    pub pubkey_modulus_limbs: [u128; 18],
+    pub redc_params_limbs: [u128; 18],
+    pub signature_limbs: [u128; 18],
+}
+
+pub global SESSION_PUBKEY: Field = ${SESSION_PUBKEY};
+pub global SECRET: Field = ${SECRET};
+pub global EXPIRY: u64 = ${EXPIRY};
+pub global SALT: Field = ${SALT};
+pub global IDENTITY_HASH: Field = ${identityHash};
+
+${nrLetter("GOOGLE", google)}
+${nrLetter("OTHER_ISS", otherIss)}`;
+fs.writeFileSync(
+  new URL("../src/tests/fixtures.nr", import.meta.url),
+  fixtures,
+);

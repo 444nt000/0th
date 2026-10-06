@@ -9,4 +9,3 @@ contracts/snfoundry_trace/
 contracts/coverage/
 contracts/profile/
 node_modules/
-circuits/Bad_*.toml
