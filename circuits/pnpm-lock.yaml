@@ -203,8 +203,18 @@ importers:
       poseidon-lite:
         specifier: ^0.3.0
         version: 0.3.0
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.4
+        version: 26.6.4
+      prettier:
+        specifier: ^3.9.9
+        version: 3.9.9
 
 packages:
+
+  '@types/node@26.6.4':
+    resolution: {integrity: sha512-ldVPDCzj7fsaGZrLB0NuHuTvJcsNasysBAqMolr/cgxrLd1xbqxIr3XJiPnHHJUCxj5sNF1vnRj9aWnrVh5Jcg==}
 
   noir-jwt@0.4.5:
     resolution: {integrity: sha512-7v3wj/Www6ebtkcjpDahCRMlCeAOHys1r0BPYBX45pJ1UiogXL3mNsWc2LPeKn7/2gw+nnF4D9liS9t21MiOjg==}
@@ -212,8 +222,24 @@ packages:
   poseidon-lite@0.3.0:
     resolution: {integrity: sha512-ilJj4MIve4uBEG7SrtPqUUNkvpJ/pLVbndxa0WvebcQqeIhe+h72JR4g0EvwchUzm9sOQDlOjiDNmRAgxNZl4A==}
 
+  prettier@3.9.9:
+    resolution: {integrity: sha512-Z/CJHIkdujO/OtN7nXUii0Rf3VT5SRuhjBA82Xvu2XhBUgX3nhP67T0LHceBdQLex7OOFGTox+Q5Yg8Jk2Qivg==}
+    engines: {node: '>=14'}
+    hasBin: true
+
+  undici-types@8.9.0:
+    resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
+
 snapshots:
+
+  '@types/node@26.6.4':
+    dependencies:
+      undici-types: 8.9.0
 
   noir-jwt@0.4.5: {}
 
   poseidon-lite@0.3.0: {}
+
+  prettier@3.9.9: {}
+
+  undici-types@8.9.0: {}
