@@ -1,5 +1,5 @@
 [workspace]
-members = ["account", "verifier"]
+members = ["account", "registry", "verifier"]
 
 # load snforge's prebuilt plugin instead of compiling it with cargo
 [workspace.tool.scarb]
