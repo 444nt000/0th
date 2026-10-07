@@ -1,17 +1,25 @@
+#:tombi schema.strict = false
+
 [package]
 name = "account"
 version = "0.1.0"
 edition = "2024_07"
 
 [dependencies]
-starknet = "2.16.1"
+starknet = "2.18.0"
+openzeppelin_access = "4.0.1"
+openzeppelin_introspection = "4.0.1"
+registry = { path = "../registry" }
+verifier = { path = "../verifier" }
 
 [dev-dependencies]
-snforge_std = "0.57.0"
-assert_macros = "2.16.1"
+snforge_std = "0.60.0"
+assert_macros = "2.18.0"
+openzeppelin_interfaces = "2.2.0"
 
 [[target.starknet-contract]]
 sierra = true
+build-external-contracts = ["registry::registry::Registry", "verifier::honk_verifier::UltraKeccakZKHonkVerifier"]
 
 [scripts]
 test.workspace = true
