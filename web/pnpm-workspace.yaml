@@ -1,0 +1,7 @@
+allowBuilds:
+  msgpackr-extract: false
+
+packageExtensions:
+  "@aztec/bb.js":
+    dependencies:
+      buffer: ^6.0.3
