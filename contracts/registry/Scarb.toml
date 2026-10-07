@@ -1,0 +1,24 @@
+#:tombi schema.strict = false
+
+[package]
+name = "registry"
+version = "0.1.0"
+edition = "2024_07"
+
+[dependencies]
+starknet = "2.18.0"
+openzeppelin_access = "4.0.1"
+openzeppelin_introspection = "4.0.1"
+
+[dev-dependencies]
+snforge_std = "0.60.0"
+
+[lib]
+
+[[target.starknet-contract]]
+
+[scripts]
+test.workspace = true
+
+[tool]
+scarb.workspace = true
