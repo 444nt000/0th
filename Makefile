@@ -72,7 +72,11 @@ $(FIXTURE): $(CIRCUIT_SRC)
 	cd contracts && garaga gen --system ultra_keccak_zk_honk --vk ../circuits/target/vk --project-name verifier
 	# drop the generated [cairo], the workspace root already sets it (scarb only reads it there)
 	sed -i.bak '/^\[cairo\]/,/^$$/d' contracts/verifier/Scarb.toml && rm contracts/verifier/Scarb.toml.bak
-	printf '\n[scripts]\ntest.workspace = true\n\n[tool]\nscarb.workspace = true\n' >> contracts/verifier/Scarb.toml
+	# garaga pins its own toolchain, use ours (the nested .tool-versions would shadow the root one)
+	rm -f contracts/verifier/.tool-versions
+	sed -i.bak -E -e 's/^(starknet|assert_macros) = ".*"/\1 = "$(call pin,scarb)"/' \
+		-e 's/^snforge_std = ".*"/snforge_std = "$(call pin,starknet-foundry)"/' contracts/verifier/Scarb.toml && rm contracts/verifier/Scarb.toml.bak
+	printf '\n[lib]\n\n[scripts]\ntest.workspace = true\n\n[tool]\nscarb.workspace = true\n' >> contracts/verifier/Scarb.toml
 	garaga calldata --system ultra_keccak_zk_honk --vk circuits/target/vk --proof circuits/target/proof \
 		--public-inputs circuits/target/public_inputs --format snforge --output-path contracts/verifier/tests
 	cd contracts && snforge test --package verifier
@@ -82,7 +86,7 @@ build: verifier
 	cd circuits && nargo compile
 
 test: verifier
-	cd contracts && scarb test --package account
+	cd contracts && scarb test --package account,registry
 	cd circuits && nargo test
 
 fmt:
