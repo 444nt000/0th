@@ -1,5 +1,1 @@
-#[starknet::contract]
-mod account {
-    #[storage]
-    struct Storage {}
-}
+pub mod account;
