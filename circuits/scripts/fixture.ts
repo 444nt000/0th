@@ -4,6 +4,7 @@
 //
 // usage: make fixtures
 //   Prover.toml            a valid letter, for `nargo execute` and the verifier proof
+//   Prover.json            the same letter, for the web prover (web/)
 //   src/tests/fixtures.nr  letters and constants for src/tests/
 
 import crypto from "node:crypto";
@@ -90,25 +91,39 @@ const google = await letter(GOOGLE_ISS);
 // signed correctly, but iss is not Google
 const otherIss = await letter("http://test.com");
 
-// Prover.toml: the valid letter
-const arr = (xs: unknown[]) => JSON.stringify(xs.map(String));
+// Circuit inputs of the valid letter, as decimal strings
+const str = (xs: unknown[]) => xs.map(String);
+const inputs = {
+  base64_decode_offset: String(google.base64_decode_offset),
+  pubkey_modulus_limbs: str(google.pubkey_modulus_limbs),
+  redc_params_limbs: str(google.redc_params_limbs),
+  signature_limbs: str(google.signature_limbs),
+  session_pubkey: String(SESSION_PUBKEY),
+  expiry: String(EXPIRY),
+  secret: String(SECRET),
+  salt: String(SALT),
+  data: { len: String(google.data.len), storage: str(google.data.storage) },
+};
+
+// Prover.toml: the valid letter, for nargo
+const { data, ...top } = inputs;
+const toml = (o: object) =>
+  Object.entries(o).map(([k, v]) => `${k} = ${JSON.stringify(v)}`);
 const prover = [
-  `base64_decode_offset = "${google.base64_decode_offset}"`,
-  `pubkey_modulus_limbs = ${arr(google.pubkey_modulus_limbs)}`,
-  `redc_params_limbs = ${arr(google.redc_params_limbs)}`,
-  `signature_limbs = ${arr(google.signature_limbs)}`,
-  `session_pubkey = "${SESSION_PUBKEY}"`,
-  `expiry = "${EXPIRY}"`,
-  `secret = "${SECRET}"`,
-  `salt = "${SALT}"`,
+  ...toml(top),
   `return = "${identityHash}"`,
   "",
   "[data]",
-  `len = "${google.data.len}"`,
-  `storage = ${arr(google.data.storage)}`,
+  ...toml(data),
   "",
 ].join("\n");
 fs.writeFileSync(new URL("../Prover.toml", import.meta.url), prover);
+
+// Prover.json: the same letter, for the web prover
+fs.writeFileSync(
+  new URL("../Prover.json", import.meta.url),
+  JSON.stringify(inputs),
+);
 
 // One `Letter` value, in Noir
 const nrLetter = (

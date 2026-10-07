@@ -23,6 +23,7 @@ setup:
 	curl -fsSL https://github.com/software-mansion/universal-sierra-compiler/releases/download/v$(USC_VERSION)/$(USC).tar.gz \
 		| tar -xz -C $(HOME)/.local/bin --strip-components=2 $(USC)/bin/universal-sierra-compiler
 	cd circuits && pnpm install --frozen-lockfile
+	cd web && pnpm install --frozen-lockfile
 	git config core.hooksPath .githooks
 	@$(MAKE) --no-print-directory versions
 
@@ -50,7 +51,7 @@ versions:
 devnet:
 	starknet-devnet --seed 0
 
-# writes circuits/Prover.toml and circuits/src/tests/fixtures.nr from the committed test key.
+# writes circuits/Prover.toml, circuits/Prover.json and circuits/src/tests/fixtures.nr from the committed test key.
 # deterministic: rerun only after changing scripts/fixture.ts or the key.
 fixtures:
 	cd circuits && node scripts/fixture.ts && nargo fmt
@@ -92,12 +93,12 @@ test: verifier
 fmt:
 	cd contracts && scarb fmt
 	cd circuits && nargo fmt
-	cd circuits && pnpm exec prettier --write scripts
+	cd circuits && pnpm exec prettier --write scripts ../web/src
 
 fmt-check:
 	cd contracts && scarb fmt --check
 	cd circuits && nargo fmt --check
-	cd circuits && pnpm exec prettier --check scripts
+	cd circuits && pnpm exec prettier --check scripts ../web/src
 
 clean:
 	cd contracts && scarb clean
