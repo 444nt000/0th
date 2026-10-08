@@ -1,6 +1,4 @@
 // Builds fake Google letters (JWTs) and writes them as circuit inputs. Tests only.
-// They are signed by a test key: the circuit accepts any RSA key, the contract checks it is Google's.
-// RS256 is deterministic, so a rerun writes the same files.
 //
 // usage: make fixtures
 //   Prover.toml            a valid letter, for `nargo execute` and the verifier proof
@@ -10,6 +8,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
+import { getStarkKey } from "@scure/starknet";
 import { poseidon3, poseidon8 } from "poseidon-lite";
 
 // noir-jwt 0.4.5's ESM build breaks in Node (extensionless imports), so load its CommonJS build
@@ -18,11 +17,16 @@ const { generateInputs } = createRequire(import.meta.url)("noir-jwt");
 const GOOGLE_ISS = "https://accounts.google.com";
 const CLIENT_ID =
   "123456789012-0123456789abcdef0123456789abcdef.apps.googleusercontent.com";
-const SUB = "123456789012345678901"; // Google ids are 21 digits
-const SESSION_PUBKEY = 1n; // any Field works: the circuit only hashes it
-const SECRET = 2n;
+const SUB = "123456789012345678901";
+
+// A real Stark key pair: contract tests sign with it
+const SESSION_PRIVKEY = "0x1234567890abcdef";
+const SESSION_PUBKEY = BigInt(getStarkKey(SESSION_PRIVKEY));
 const EXPIRY = 1800000000n; // Unix seconds (2027-01-15)
-const SALT = 12345n; // the real one comes from the dev's server
+const SECRET = 2n;
+
+const SALT = 12345n; // the real one is derived per user
+
 const MAX_DATA_LENGTH = 1024; // same as in src/main.nr
 
 // Same as `pack` in src/main.nr: 31 bytes per Field, padded with 0 bytes
@@ -43,9 +47,8 @@ const privateKey = crypto.createPrivateKey(
 );
 const publicKey = crypto.createPublicKey(privateKey);
 
-// Google side: signs "header.payload" with RS256, like a real Google JWT
+// Google side: a JWT with the same claims, order and formats as Google's for scope "openid"
 function sign(iss: string) {
-  // Same claims, order and formats as Google's for scope "openid"
   const payload = {
     iss,
     azp: CLIENT_ID,
@@ -79,7 +82,6 @@ const identityHash = poseidon8([
   SALT,
 ]);
 
-// Circuit inputs for one letter, computed by noir-jwt
 const letter = (iss: string) =>
   generateInputs({
     jwt: sign(iss),
@@ -90,6 +92,9 @@ const letter = (iss: string) =>
 const google = await letter(GOOGLE_ISS);
 // signed correctly, but iss is not Google
 const otherIss = await letter("http://test.com");
+
+const write = (path: string, text: string) =>
+  fs.writeFileSync(new URL(path, import.meta.url), text);
 
 // Circuit inputs of the valid letter, as decimal strings
 const str = (xs: unknown[]) => xs.map(String);
@@ -105,7 +110,7 @@ const inputs = {
   data: { len: String(google.data.len), storage: str(google.data.storage) },
 };
 
-// Prover.toml: the valid letter, for nargo
+// Prover.toml: the [data] table must come after the top-level keys
 const { data, ...top } = inputs;
 const toml = (o: object) =>
   Object.entries(o).map(([k, v]) => `${k} = ${JSON.stringify(v)}`);
@@ -117,15 +122,10 @@ const prover = [
   ...toml(data),
   "",
 ].join("\n");
-fs.writeFileSync(new URL("../Prover.toml", import.meta.url), prover);
+write("../Prover.toml", prover);
 
-// Prover.json: the same letter, for the web prover
-fs.writeFileSync(
-  new URL("../Prover.json", import.meta.url),
-  JSON.stringify(inputs),
-);
+write("../Prover.json", JSON.stringify(inputs));
 
-// One `Letter` value, in Noir
 const nrLetter = (
   name: string,
   l: typeof google,
@@ -159,7 +159,4 @@ pub global IDENTITY_HASH: Field = ${identityHash};
 
 ${nrLetter("GOOGLE", google)}
 ${nrLetter("OTHER_ISS", otherIss)}`;
-fs.writeFileSync(
-  new URL("../src/tests/fixtures.nr", import.meta.url),
-  fixtures,
-);
+write("../src/tests/fixtures.nr", fixtures);

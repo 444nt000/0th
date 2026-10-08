@@ -10,6 +10,7 @@
   },
   "type": "module",
   "dependencies": {
+    "@scure/starknet": "^2.4.0",
     "noir-jwt": "^0.4.5",
     "poseidon-lite": "^0.3.0"
   },
