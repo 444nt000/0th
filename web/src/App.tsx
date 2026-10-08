@@ -22,8 +22,10 @@ function App() {
   async function prove() {
     setLog("");
     setProof();
+    // bb.js falls back to 1 thread when the page is not cross-origin isolated
+    const threads = crossOriginIsolated ? navigator.hardwareConcurrency : 1;
     say(
-      `threads: ${navigator.hardwareConcurrency}, cross-origin isolated: ${crossOriginIsolated}`,
+      `threads: ${threads} (cores: ${navigator.hardwareConcurrency}), cross-origin isolated: ${crossOriginIsolated}`,
     );
     let backend: UltraHonkBackend | undefined;
     try {
@@ -40,7 +42,7 @@ function App() {
       say(`witness: ${lap()}`);
 
       backend = new UltraHonkBackend(circuit.bytecode, {
-        threads: navigator.hardwareConcurrency,
+        threads,
         logger: console.log,
       });
       // same proof system as `bb prove -s ultra_honk --oracle_hash keccak` (ZK on) and Garaga's ultra_keccak_zk_honk
