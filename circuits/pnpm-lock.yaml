@@ -197,6 +197,9 @@ importers:
 
   .:
     dependencies:
+      '@scure/starknet':
+        specifier: ^2.4.0
+        version: 2.4.0
       noir-jwt:
         specifier: ^0.4.5
         version: 0.4.5
@@ -212,6 +215,18 @@ importers:
         version: 3.9.9
 
 packages:
+
+  '@noble/curves@2.4.0':
+    resolution: {integrity: sha512-P4/62zrgfH33CneE3Dn4WhJVA22YUU0eR51wKIan4NVRvwsA0YnPTwWGpNbpuacSujmSFLvyzpyuR30+fbq2Ew==}
+    engines: {node: '>= 20.19.0'}
+
+  '@noble/hashes@2.4.0':
+    resolution: {integrity: sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA==}
+    engines: {node: '>= 20.19.0'}
+
+  '@scure/starknet@2.4.0':
+    resolution: {integrity: sha512-ZOtYjLzibTeHUfOgLVQaaUGej+eMV+EnHyUL0+JBSsLWEDKmOggxVYs3ri7G4DybtpeR1/65iK+ihD3K9Sfqbw==}
+    engines: {node: '>= 20.19.0'}
 
   '@types/node@26.6.4':
     resolution: {integrity: sha512-ldVPDCzj7fsaGZrLB0NuHuTvJcsNasysBAqMolr/cgxrLd1xbqxIr3XJiPnHHJUCxj5sNF1vnRj9aWnrVh5Jcg==}
@@ -231,6 +246,17 @@ packages:
     resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
 
 snapshots:
+
+  '@noble/curves@2.4.0':
+    dependencies:
+      '@noble/hashes': 2.4.0
+
+  '@noble/hashes@2.4.0': {}
+
+  '@scure/starknet@2.4.0':
+    dependencies:
+      '@noble/curves': 2.4.0
+      '@noble/hashes': 2.4.0
 
   '@types/node@26.6.4':
     dependencies:
