@@ -1,17 +1,2 @@
 #!/bin/sh
-
-# check the staged files (what gets committed)
-tmp=$(mktemp -d)
-trap 'rm -rf "$tmp"' EXIT
-git checkout-index -a --prefix="$tmp/"
-# the copy has no node_modules: reuse the installed ones (prettier)
-ln -s "$PWD/circuits/node_modules" "$tmp/circuits/node_modules"
-# contracts/verifier is generated (gitignored) but the account manifest needs it
-ln -s "$PWD/contracts/verifier" "$tmp/contracts/verifier"
-
-if ! out=$(make -C "$tmp" fmt-check 2>&1); then
-    echo "$out"
-    echo
-    echo "pre-commit: Code is not formatted. Run 'make fmt', then 'git add' the changes."
-    exit 1
-fi
+exec make fmt-check

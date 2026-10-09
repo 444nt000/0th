@@ -1,13 +1,6 @@
 {
   "name": "circuits",
   "license": "GPL-3.0",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "^11.13.1",
-      "onFail": "download"
-    }
-  },
   "type": "module",
   "dependencies": {
     "@scure/starknet": "^2.4.0",
@@ -16,7 +9,6 @@
   },
   "private": true,
   "devDependencies": {
-    "@types/node": "^26.6.4",
-    "prettier": "^3.9.9"
+    "@types/node": "^26.6.4"
   }
 }
