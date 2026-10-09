@@ -16,6 +16,7 @@ snforge_std = "0.60.0"
 [lib]
 
 [[target.starknet-contract]]
+casm = true
 
 [scripts]
 test.workspace = true

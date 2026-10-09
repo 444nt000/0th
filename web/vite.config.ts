@@ -9,8 +9,6 @@ export default defineConfig({
       "Cross-Origin-Opener-Policy": "same-origin",
       "Cross-Origin-Embedder-Policy": "require-corp",
     },
-    // the circuit and its test inputs live in ../circuits
-    fs: { allow: [".", "../circuits"] },
   },
   optimizeDeps: {
     exclude: [

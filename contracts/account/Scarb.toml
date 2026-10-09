@@ -21,6 +21,7 @@ openzeppelin_interfaces = "2.2.0"
 
 [[target.starknet-contract]]
 sierra = true
+casm = true
 build-external-contracts = ["registry::registry::Registry", "verifier::honk_verifier::UltraKeccakZKHonkVerifier"]
 
 [scripts]
