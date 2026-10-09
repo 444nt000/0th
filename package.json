@@ -1,0 +1,15 @@
+{
+  "name": "0th",
+  "private": true,
+  "license": "GPL-3.0",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "11.13.1",
+      "onFail": "download"
+    }
+  },
+  "devDependencies": {
+    "prettier": "^3.9.9"
+  }
+}

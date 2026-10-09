@@ -3,7 +3,6 @@ docs/
 
 # build
 target/
-contracts/verifier/
 contracts/.snfoundry_cache/
 contracts/snfoundry_trace/
 contracts/coverage/

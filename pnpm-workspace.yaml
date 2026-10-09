@@ -1,6 +1,11 @@
+packages:
+  - circuits
+  - web
+
 allowBuilds:
   msgpackr-extract: false
 
+# bb.js imports `buffer` without declaring it
 packageExtensions:
   "@aztec/bb.js":
     dependencies:
