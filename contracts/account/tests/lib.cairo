@@ -1,3 +1,4 @@
+pub mod test_execute;
 pub mod test_register_session;
 
 pub mod mocks {

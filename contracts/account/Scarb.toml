@@ -8,7 +8,9 @@ edition = "2024_07"
 [dependencies]
 starknet = "2.18.0"
 openzeppelin_access = "4.0.1"
+openzeppelin_account = "4.0.1"
 openzeppelin_introspection = "4.0.1"
+openzeppelin_utils = "2.2.0"
 registry = { path = "../registry" }
 verifier = { path = "../verifier" }
 

@@ -6,8 +6,10 @@ name = "account"
 version = "0.1.0"
 dependencies = [
  "openzeppelin_access",
+ "openzeppelin_account",
  "openzeppelin_interfaces",
  "openzeppelin_introspection",
+ "openzeppelin_utils",
  "registry",
  "snforge_std",
  "verifier",
@@ -37,6 +39,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "openzeppelin_account"
+version = "4.0.1"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:696c00da4fe4fb7e91f6d5c81157d7c10cd1125fdcce677a9557fb10cf2fa185"
+dependencies = [
+ "openzeppelin_interfaces",
+ "openzeppelin_introspection",
+ "openzeppelin_utils",
+]
+
+[[package]]
 name = "openzeppelin_interfaces"
 version = "2.2.0"
 source = "registry+https://scarbs.xyz/"
@@ -47,6 +60,15 @@ name = "openzeppelin_introspection"
 version = "4.0.1"
 source = "registry+https://scarbs.xyz/"
 checksum = "sha256:087017ddb37b430704470a042c0d358a3e33098ac277b7f783dfb6cddbd4ad23"
+dependencies = [
+ "openzeppelin_interfaces",
+]
+
+[[package]]
+name = "openzeppelin_utils"
+version = "2.2.0"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:a72fa07988980781999dde2fe3a9ffe2c7a537ed0590795718aeaae3054be95f"
 dependencies = [
  "openzeppelin_interfaces",
 ]

@@ -1,6 +1,14 @@
+// Core
+use core::num::traits::Zero;
+
 // Snforge
 use snforge_std::fs::{FileTrait, read_txt};
-use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
+use snforge_std::signature::stark_curve::{StarkCurveKeyPairImpl, StarkCurveSignerImpl};
+use snforge_std::{
+    ContractClassTrait, DeclareResultTrait, declare, start_cheat_caller_address,
+    start_cheat_signature_global, start_cheat_transaction_hash_global,
+    start_cheat_transaction_version_global,
+};
 
 // Starknet
 use starknet::{ContractAddress, SyscallResultTrait};
@@ -11,6 +19,9 @@ pub const STRANGER: ContractAddress = 'STRANGER'.try_into().unwrap();
 
 // From circuits/scripts/fixture.ts
 pub const EXPIRY: u64 = 1800000000;
+pub const SESSION_PRIVKEY: felt252 = 0x1234567890abcdef;
+
+pub const TX_HASH: felt252 = 'TX_HASH';
 
 // Public inputs of the circuit, in order
 pub const MODULUS_LIMBS: u32 = 18;
@@ -66,4 +77,19 @@ pub fn replace_input(inputs: Span<u256>, index: u32, value: u256) -> Array<u256>
 /// The session key the proof registers (public input 18)
 pub fn session_key(inputs: Span<u256>) -> felt252 {
     (*inputs[SESSION_KEY_INPUT]).try_into().unwrap()
+}
+
+/// Signs a tx hash with the fixture session key, as the account expects: `[session_key, r, s]`
+pub fn session_signature(tx_hash: felt252) -> Array<felt252> {
+    let key_pair = StarkCurveKeyPairImpl::from_secret_key(SESSION_PRIVKEY);
+    let (r, s) = key_pair.sign(tx_hash).unwrap();
+    array![key_pair.public_key, r, s]
+}
+
+/// Makes the next calls to the account look like a transaction sent by the protocol
+pub fn cheat_tx(account: ContractAddress, signature: Span<felt252>) {
+    start_cheat_transaction_hash_global(TX_HASH);
+    start_cheat_signature_global(signature);
+    start_cheat_transaction_version_global(3);
+    start_cheat_caller_address(account, Zero::zero());
 }
