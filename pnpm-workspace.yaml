@@ -1,6 +1,7 @@
 packages:
   - circuits
   - web
+  - deploy
 
 allowBuilds:
   msgpackr-extract: false
