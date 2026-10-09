@@ -7,21 +7,27 @@ pub trait IAccount<TContractState> {
 // Longest session a proof may ask for (30 days)
 pub const MAX_SESSION: u64 = 30 * 24 * 3600;
 
-#[starknet::contract]
+#[starknet::contract(account)]
 pub mod Account {
+    // Core
+    use core::num::traits::Zero;
+
     // OpenZeppelin
     use openzeppelin_access::accesscontrol::{AccessControlComponent, DEFAULT_ADMIN_ROLE};
+    use openzeppelin_account::utils::{is_tx_version_valid, is_valid_stark_signature};
     use openzeppelin_introspection::src5::SRC5Component;
+    use openzeppelin_utils::execution::execute_calls;
 
     // Registry
     use registry::registry::{IKeyRegistryDispatcher, IKeyRegistryDispatcherTrait};
 
     // Starknet
+    use starknet::account::Call;
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
         StoragePointerWriteAccess,
     };
-    use starknet::{ContractAddress, get_block_timestamp};
+    use starknet::{ContractAddress, get_block_timestamp, get_caller_address, get_tx_info};
 
     // Verifier
     use verifier::honk_verifier::{
@@ -121,5 +127,29 @@ pub mod Account {
         fn get_session_expiry(self: @ContractState, session_key: felt252) -> u64 {
             self.sessions.read(session_key)
         }
+    }
+
+    #[external(v0)]
+    fn __validate__(self: @ContractState, calls: Array<Call>) -> felt252 {
+        let tx_info = get_tx_info().unbox();
+        let signature = tx_info.signature;
+        assert(signature.len() == 3, 'invalid signature length');
+
+        let session_key = *signature[0];
+        assert(get_block_timestamp() < self.sessions.read(session_key), 'invalid session');
+
+        assert(
+            is_valid_stark_signature(tx_info.transaction_hash, session_key, signature.slice(1, 2)),
+            'invalid signature',
+        );
+        starknet::VALIDATED
+    }
+
+    #[external(v0)]
+    fn __execute__(self: @ContractState, calls: Array<Call>) {
+        assert(get_caller_address().is_zero(), 'invalid caller');
+        assert(is_tx_version_valid(), 'invalid tx version');
+
+        execute_calls(calls.span());
     }
 }
