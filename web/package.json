@@ -9,7 +9,11 @@
   "dependencies": {
     "@aztec/bb.js": "3.0.0-nightly.20251104",
     "@noir-lang/noir_js": "1.0.0-beta.16",
-    "solid-js": "^1.9.15"
+    "garaga": "1.1.0",
+    "noir-jwt": "0.4.5",
+    "poseidon-lite": "^0.3.0",
+    "solid-js": "^1.9.15",
+    "starknet": "10.8.0"
   },
   "devDependencies": {
     "typescript": "~6.0.2",

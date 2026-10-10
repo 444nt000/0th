@@ -2,6 +2,7 @@
   "compilerOptions": {
     "module": "nodenext",
     "types": ["node"],
+    "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
