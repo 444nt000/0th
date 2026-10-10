@@ -2,7 +2,7 @@
 //
 // usage: make fixtures
 //   Prover.toml            a valid letter, for `nargo execute` and the verifier proof
-//   Prover.json            the same letter, for the web prover (web/)
+//   Prover.json            the same letter, as JSON: the test RSA key the registry needs (deploy/)
 //   src/tests/fixtures.nr  letters and constants for src/tests/
 
 import crypto from "node:crypto";

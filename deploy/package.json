@@ -4,9 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "devnet": "node devnet.ts"
+    "deploy-devnet": "node deploy-devnet.ts",
+    "e2e-devnet": "node e2e-devnet.ts",
+    "devnet-service": "node devnet-service.ts"
   },
   "dependencies": {
+    "garaga": "1.1.0",
     "starknet": "10.8.0"
   },
   "devDependencies": {
