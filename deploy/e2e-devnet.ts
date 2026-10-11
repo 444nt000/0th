@@ -25,7 +25,7 @@ import {
   readDeployment,
   relay,
   send,
-  setTime,
+  atTime,
 } from "./devnet.ts";
 
 // The session key the proof registers (circuits/scripts/fixture.ts)
@@ -60,6 +60,18 @@ async function proofCalldata() {
 const publicInput = (calldata: bigint[], i: number) =>
   (calldata[3 + 2 * i] << 128n) | calldata[2 + 2 * i];
 
+// User side: a transfer signed by the session key, paid by the account.
+// The account reads [session_key, r, s] (account.cairo, __validate__), so the key leads the signature
+// instead of starknet.js's plain [r, s]. signRaw is the one place every signing path goes through.
+// Same class as web/src/login.ts: it moves to sdk/ when that package exists (TRACKING.md, Target layout)
+class SessionSigner extends Signer {
+  async signRaw(hash: string) {
+    // The base signer always signs on the Stark curve, so r and s are there
+    const { r, s } = (await super.signRaw(hash)) as WeierstrassSignatureType;
+    return [await this.getPubKey(), num.toHex(r), num.toHex(s)];
+  }
+}
+
 const relayer = await devnetAccount();
 const { registry, verifier, accountClassHash } = readDeployment();
 
@@ -74,83 +86,75 @@ check(
   "proof registers the fixture session key",
 );
 
-// The fixture's expiry is a fixed date, further out than MAX_SESSION allows from today, so move
-// devnet's clock to one day before it: same convention as the account tests (tests/utils/setup.cairo)
-await setTime(expiry - 24n * 3600n);
+// The fixture's expiry is a fixed date, further out than MAX_SESSION allows from today, so run the
+// chain half with devnet's clock one day before it: same convention as the account tests
+// (tests/utils/setup.cairo). atTime puts the clock back to now even if a check below fails, so
+// whoever uses the chain next (make devnet-service, the page) finds it where they expect
+await atTime(expiry - 24n * 3600n, async () => {
+  // Browser side: the address, from the identity and the contracts the account will trust.
+  // admin = the relayer until the role goes away (TRACKING.md, Later)
+  const constructorCalldata = CallData.compile([
+    relayer.address,
+    registry,
+    verifier,
+    cairo.uint256(identityHash),
+  ]);
+  // Relayer side: deploy the account and register the session, in one transaction
+  const address = await relay(
+    relayer,
+    accountClassHash,
+    constructorCalldata,
+    calldata.map(String),
+  );
+  console.log(`account  ${address}`);
 
-// Browser side: the address, from the identity and the contracts the account will trust.
-// admin = the relayer until the role goes away (TRACKING.md, Later)
-const constructorCalldata = CallData.compile([
-  relayer.address,
-  registry,
-  verifier,
-  cairo.uint256(identityHash),
-]);
-// Relayer side: deploy the account and register the session, in one transaction
-const address = await relay(
-  relayer,
-  accountClassHash,
-  constructorCalldata,
-  calldata.map(String),
-);
-console.log(`account  ${address}`);
-
-// The account class is declared by make deploy-devnet, which this target depends on
-const accountClass = await provider.getClassByHash(accountClassHash);
-check((await classAt(address)) === accountClassHash, "account deployed");
-const account = new Contract({
-  abi: accountClass.abi,
-  address,
-  providerOrAccount: provider,
-});
-check(
-  BigInt(await account.get_session_expiry(sessionKey)) === expiry,
-  "session registered in the same transaction",
-);
-
-// User side: a transfer signed by the session key, paid by the account.
-// The account reads [session_key, r, s] (account.cairo, __validate__), so the key leads the signature
-// instead of starknet.js's plain [r, s]. signRaw is the one place every signing path goes through.
-// Same class as web/src/login.ts: it moves to sdk/ when that package exists (TRACKING.md, Target layout)
-class SessionSigner extends Signer {
-  async signRaw(hash: string) {
-    // The base signer always signs on the Stark curve, so r and s are there
-    const { r, s } = (await super.signRaw(hash)) as WeierstrassSignatureType;
-    return [await this.getPubKey(), num.toHex(r), num.toHex(s)];
-  }
-}
-const user = new Account({
-  provider,
-  address,
-  signer: new SessionSigner(SESSION_PRIVKEY),
-});
-// Called directly, so the 672 KB STRK class never has to be fetched for its ABI.
-// balance_of returns a u256, as [low, high]
-const balance = async (who: string) => {
-  const [low, high] = await provider.callContract({
-    contractAddress: STRK,
-    entrypoint: "balance_of",
-    calldata: [who],
+  // The account class is declared by make deploy-devnet, which this target depends on
+  const accountClass = await provider.getClassByHash(accountClassHash);
+  check((await classAt(address)) === accountClassHash, "account deployed");
+  const account = new Contract({
+    abi: accountClass.abi,
+    address,
+    providerOrAccount: provider,
   });
-  return (BigInt(high) << 128n) | BigInt(low);
-};
-const [relayerBefore, accountBefore] = await Promise.all([
-  balance(relayer.address),
-  balance(address),
-]);
-await send(user, [
-  {
-    contractAddress: STRK,
-    entrypoint: "transfer",
-    calldata: CallData.compile([relayer.address, cairo.uint256(TRANSFER)]),
-  },
-]);
-check(
-  (await balance(relayer.address)) - relayerBefore === TRANSFER,
-  "transfer signed by the session key landed",
-);
-// The relayer only paid the first transaction: the fee came out of the account, on top of the transfer
-check(
-  accountBefore - (await balance(address)) > TRANSFER,
-  "the account paid its own fee",
-);
+  check(
+    BigInt(await account.get_session_expiry(sessionKey)) === expiry,
+    "session registered in the same transaction",
+  );
+
+  // User side: a transfer signed by the session key, paid by the account
+  const user = new Account({
+    provider,
+    address,
+    signer: new SessionSigner(SESSION_PRIVKEY),
+  });
+  // Called directly, so the 672 KB STRK class never has to be fetched for its ABI.
+  // balance_of returns a u256, as [low, high]
+  const balance = async (who: string) => {
+    const [low, high] = await provider.callContract({
+      contractAddress: STRK,
+      entrypoint: "balance_of",
+      calldata: [who],
+    });
+    return (BigInt(high) << 128n) | BigInt(low);
+  };
+  const [relayerBefore, accountBefore] = await Promise.all([
+    balance(relayer.address),
+    balance(address),
+  ]);
+  await send(user, [
+    {
+      contractAddress: STRK,
+      entrypoint: "transfer",
+      calldata: CallData.compile([relayer.address, cairo.uint256(TRANSFER)]),
+    },
+  ]);
+  check(
+    (await balance(relayer.address)) - relayerBefore === TRANSFER,
+    "transfer signed by the session key landed",
+  );
+  // The relayer only paid the first transaction: the fee came out of the account, on top of the transfer
+  check(
+    accountBefore - (await balance(address)) > TRANSFER,
+    "the account paid its own fee",
+  );
+});

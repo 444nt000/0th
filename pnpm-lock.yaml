@@ -219,7 +219,7 @@ importers:
         specifier: ^2.4.0
         version: 2.4.0
       noir-jwt:
-        specifier: ^0.4.5
+        specifier: 0.4.5
         version: 0.4.5
       poseidon-lite:
         specifier: ^0.3.0
@@ -234,6 +234,9 @@ importers:
       garaga:
         specifier: 1.1.0
         version: 1.1.0
+      noir-jwt:
+        specifier: 0.4.5
+        version: 0.4.5
       starknet:
         specifier: 10.8.0
         version: 10.8.0(typescript@6.0.3)(zod@4.6.5)
@@ -266,6 +269,9 @@ importers:
         specifier: 10.8.0
         version: 10.8.0(typescript@6.0.3)(zod@4.6.5)
     devDependencies:
+      '@types/node':
+        specifier: ^26.6.4
+        version: 26.6.4
       typescript:
         specifier: ~6.0.2
         version: 6.0.3

@@ -4,7 +4,11 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "lib": ["ESNext", "DOM"],
-    "types": ["vite/client"],
+    // node for the *.test.ts files, which run on node --test, not in the browser. The cost: Node's
+    // globals also typecheck in the page's own code, where they would fail at runtime. Nothing in
+    // src/ uses them outside the tests (TRACKING.md, Tooling)
+    "types": ["vite/client", "node"],
+    "allowImportingTsExtensions": true,
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
     "noEmit": true,

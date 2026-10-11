@@ -22,7 +22,9 @@ import { poseidon3, poseidon8 } from "poseidon-lite";
 const GOOGLE_ISS = "https://accounts.google.com";
 // Multiples of 31, same as src/main.nr: pack cuts text into 31-byte pieces
 const MAX_AUD_LENGTH = 93;
-const MAX_SUB_LENGTH = 31;
+// Exported so the page can report a real letter's margin against it: Google allows a sub of up to
+// 255 characters, and one over this cannot be proven (TRACKING.md, Later, Circuit)
+export const MAX_SUB_LENGTH = 31;
 
 // Same as `pack` in src/main.nr: 31 bytes per Field, padded with 0 bytes
 function pack(text: string, max: number) {
@@ -33,28 +35,45 @@ function pack(text: string, max: number) {
   );
 }
 
-type LetterPayload = { iss: string; aud: string; sub: string };
+type LetterPayload = { iss: string; aud: string; sub: string; nonce: string };
 
 const isLetterPayload = (value: unknown): value is LetterPayload =>
   typeof value === "object" &&
   value !== null &&
-  ["iss", "aud", "sub"].every(
+  ["iss", "aud", "sub", "nonce"].every(
     (claim) => typeof (value as Record<string, unknown>)[claim] === "string",
   );
 
-// The claims the identity is built from, read from the letter the way the circuit reads them.
-// The letter is untrusted input here: the proof is what vouches for it, and only later
-export function claims(jwt: string): { aud: string; sub: string } {
-  // base64url, unpadded as JWTs are, then UTF-8 like the bytes the circuit packs
-  const payload: unknown = JSON.parse(
+// One part of a JWT, parsed: 0 is the header, 1 the payload. base64url and unpadded as JWTs are,
+// then UTF-8 like the bytes the circuit packs
+export function segment(jwt: string, i: number): unknown {
+  const parts = jwt.split(".");
+  if (parts.length !== 3) throw new Error("not a JWT: expected three parts");
+  return JSON.parse(
     new TextDecoder().decode(
-      Uint8Array.fromBase64(jwt.split(".")[1], { alphabet: "base64url" }),
+      Uint8Array.fromBase64(parts[i], { alphabet: "base64url" }),
     ),
   );
+}
+
+// The claims the identity is built from, read from the letter the way the circuit reads them.
+// The letter is untrusted input here: the proof is what vouches for it, and only later. These checks
+// are what stop us building an address from a letter the circuit would then refuse to prove, or from
+// one that is not about this login at all
+export function claims(jwt: string, clientId: string, nonce: string) {
+  const payload = segment(jwt, 1);
   if (!isLetterPayload(payload))
-    throw new Error("letter has no iss, aud or sub");
-  const { iss, aud, sub } = payload;
+    throw new Error("letter has no iss, aud, sub or nonce");
+  const { iss, aud, sub, nonce: sealed } = payload;
   if (iss !== GOOGLE_ISS) throw new Error(`letter is not Google's: iss ${iss}`);
+  // A letter for another dapp proves a real Google login, just not one for us: its aud would give
+  // a different identity_hash, so the circuit would prove an address this page does not control
+  if (aud !== clientId)
+    throw new Error(`letter is for another app: aud ${aud}`);
+  // The nonce is what ties the letter to our session key, under Google's seal. The circuit checks it
+  // too, so a mismatch is an unprovable letter: catch it here, before paying for a proof
+  if (sealed !== nonce)
+    throw new Error("letter does not name this session key");
   // The circuit's limits: a longer claim cannot be proven
   if (aud.length > MAX_AUD_LENGTH) throw new Error(`aud too long: ${aud}`);
   if (sub.length > MAX_SUB_LENGTH) throw new Error(`sub too long: ${sub}`);

@@ -1,6 +1,8 @@
 // Devnet helpers shared by the deploy script (deploy-devnet.ts) and the end-to-end run (e2e-devnet.ts).
 
+import crypto from "node:crypto";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import {
   Account,
   type Call,
@@ -11,6 +13,12 @@ import {
   json,
   logger,
 } from "starknet";
+
+// noir-jwt 0.4.5's ESM build breaks in Node (extensionless imports), so load its CommonJS build,
+// the same way circuits/scripts/fixture.ts does
+const { splitBigIntToChunks } = createRequire(import.meta.url)(
+  "noir-jwt",
+) as typeof import("noir-jwt");
 
 logger.setLogLevel("ERROR");
 
@@ -52,8 +60,20 @@ export const mint = (address: string, amount: number) =>
   devnetCall("devnet_mint", { address, amount, unit: "FRI" });
 
 // Moves devnet's clock, so a committed proof fixture can be used past its real date
-export const setTime = (time: bigint) =>
+const setTime = (time: bigint) =>
   devnetCall("devnet_setTime", { time: Number(time), generate_block: true });
+
+// Runs `body` with devnet's clock at `time`, then puts it back to now whatever happens. The pair has to
+// stay together: a script that left the clock in the fixture's year would break every later login, since
+// a real Google letter expires relative to now and the account only accepts `now < expiry`
+export async function atTime<T>(time: bigint, body: () => Promise<T>) {
+  await setTime(time);
+  try {
+    return await body();
+  } finally {
+    await setTime(BigInt(Math.floor(Date.now() / 1000)));
+  }
+}
 
 const read = (file: string) =>
   json.parse(fs.readFileSync(new URL(file, ARTIFACTS), "utf8"));
@@ -137,6 +157,56 @@ export async function relay(
   ]);
   return address;
 }
+
+// An RSA public key as the registry and the circuit see it: 18 limbs of 120 bits, little endian.
+// noir-jwt splits the modulus the same way for the circuit's own input (`pubkey_modulus_limbs`), so
+// calling its function is what keeps the registry's copy and the proof's copy from drifting.
+// The registry stores a hash of the limbs and the circuit never range-checks them, so only these exact
+// limbs are safe (`TRACKING.md`, notes)
+export function keyLimbs(jwk: JsonWebKey) {
+  if (jwk.kty !== "RSA" || !jwk.n) throw new Error("not an RSA public key");
+  // The circuit fixes the exponent at 65537, so another one would prove nothing about this key
+  if (jwk.e !== "AQAB") throw new Error(`exponent is not 65537: e ${jwk.e}`);
+  const modulus = BigInt(
+    `0x${Buffer.from(jwk.n, "base64url").toString("hex")}`,
+  );
+  // 18 limbs of 120 bits hold 2160, but noir_rsa is instantiated for 2048: a longer key would be
+  // silently truncated into a modulus nobody signs with
+  if (modulus.toString(2).length !== 2048)
+    throw new Error(`key is not 2048 bits: ${modulus.toString(2).length}`);
+  return splitBigIntToChunks(modulus, 120, 18).map(String);
+}
+
+// Google's live signing keys. Several at once, since Google rotates them: a letter names one in its
+// `kid`, so the registry needs every key that could have sealed it.
+// Same URL as web/src/google.ts (JWKS_URL), which picks the key the circuit proves against: see there
+const GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs";
+
+export async function googleKeys() {
+  const res = await fetch(GOOGLE_JWKS_URL).catch(() => undefined);
+  if (!res?.ok)
+    throw new Error(`cannot reach Google's JWKS (${GOOGLE_JWKS_URL})`);
+  const { keys } = (await res.json()) as {
+    keys: (JsonWebKey & { alg?: string })[];
+  };
+  // RS256 only: the circuit checks a PKCS#1 v1.5 SHA-256 seal and nothing else
+  const signing = keys.filter((key) => key.alg === "RS256");
+  if (!signing.length) throw new Error("Google's JWKS has no RS256 key");
+  return signing.map(keyLimbs);
+}
+
+// The key that seals the test letters, the same one `make fixtures` signs with. Committed, so it is
+// devnet only: in a registry anyone can reach, a key whose private half is public forges every login
+export const testKey = () =>
+  keyLimbs(
+    crypto
+      .createPublicKey(
+        fs.readFileSync(
+          new URL("../circuits/fixtures/test_rsa_key.pem", import.meta.url),
+        ),
+      )
+      .export({ format: "jwk" }),
+  );
 
 export function check(ok: boolean, what: string) {
   if (!ok) throw new Error(`check failed: ${what}`);
