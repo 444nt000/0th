@@ -6,10 +6,12 @@
   "scripts": {
     "deploy-devnet": "node deploy-devnet.ts",
     "e2e-devnet": "node e2e-devnet.ts",
-    "devnet-service": "node devnet-service.ts"
+    "devnet-service": "node devnet-service.ts",
+    "test": "node --test"
   },
   "dependencies": {
     "garaga": "1.1.0",
+    "noir-jwt": "0.4.5",
     "starknet": "10.8.0"
   },
   "devDependencies": {

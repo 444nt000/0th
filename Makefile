@@ -35,6 +35,8 @@ verifier:
 test:
 	cd contracts && scarb test --package account,registry
 	cd circuits && nargo test
+	pnpm --filter deploy test
+	pnpm --filter web test
 
 fmt:
 	cd contracts && scarb fmt
