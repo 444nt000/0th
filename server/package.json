@@ -1,0 +1,17 @@
+{
+  "name": "server",
+  "private": true,
+  "license": "GPL-3.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/serve.ts",
+    "test": "node --test src/"
+  },
+  "dependencies": {
+    "starknet": "10.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "~6.0.2"
+  }
+}

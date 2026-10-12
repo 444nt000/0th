@@ -1,0 +1,24 @@
+{
+  "name": "sdk",
+  "private": true,
+  "license": "GPL-3.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test src/"
+  },
+  "dependencies": {
+    "@aztec/bb.js": "3.0.0-nightly.20251104",
+    "@noir-lang/noir_js": "1.0.0-beta.16",
+    "garaga": "1.1.0",
+    "noir-jwt": "0.4.5",
+    "poseidon-lite": "^0.3.0",
+    "starknet": "10.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "~6.0.2"
+  }
+}

@@ -1,7 +1,7 @@
 .PHONY: setup versions devnet deploy-devnet e2e-devnet devnet-service fixtures verifier test fmt fmt-check
 .DEFAULT_GOAL := test
 
-PRETTIER = circuits/scripts web/src deploy
+PRETTIER = circuits/scripts sdk/src web/src server/src deploy
 
 setup:
 	scripts/toolchain.sh install
@@ -36,6 +36,7 @@ test:
 	cd contracts && scarb test --package account,registry
 	cd circuits && nargo test
 	pnpm --filter deploy test
+	pnpm --filter sdk test
 	pnpm --filter web test
 
 fmt:

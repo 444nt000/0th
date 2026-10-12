@@ -245,6 +245,47 @@ importers:
         specifier: ^26.6.4
         version: 26.6.4
 
+  sdk:
+    dependencies:
+      '@aztec/bb.js':
+        specifier: 3.0.0-nightly.20251104
+        version: 3.0.0-nightly.20251104
+      '@noir-lang/noir_js':
+        specifier: 1.0.0-beta.16
+        version: 1.0.0-beta.16
+      garaga:
+        specifier: 1.1.0
+        version: 1.1.0
+      noir-jwt:
+        specifier: 0.4.5
+        version: 0.4.5
+      poseidon-lite:
+        specifier: ^0.3.0
+        version: 0.3.0
+      starknet:
+        specifier: 10.8.0
+        version: 10.8.0(typescript@6.0.3)(zod@4.6.5)
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.4
+        version: 26.6.4
+      typescript:
+        specifier: ~6.0.2
+        version: 6.0.3
+
+  server:
+    dependencies:
+      starknet:
+        specifier: 10.8.0
+        version: 10.8.0(typescript@6.0.3)(zod@4.6.5)
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.4
+        version: 26.6.4
+      typescript:
+        specifier: ~6.0.2
+        version: 6.0.3
+
   web:
     dependencies:
       '@aztec/bb.js':
