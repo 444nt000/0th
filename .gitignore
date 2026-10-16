@@ -1,6 +1,6 @@
 .env
 docs/
-contracts/accounts/*.keystore.json
+contracts/.sncast/
 
 # build
 target/

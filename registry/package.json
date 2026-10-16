@@ -1,0 +1,17 @@
+{
+  "name": "registry",
+  "private": true,
+  "license": "GPL-3.0",
+  "type": "module",
+  "scripts": {
+    "sync": "node src/sync.ts"
+  },
+  "dependencies": {
+    "noir-jwt": "0.4.5",
+    "starknet": "10.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "~6.0.2"
+  }
+}

@@ -4,15 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "deploy": "node deploy.ts",
-    "e2e-devnet": "node e2e-devnet.ts",
-    "devnet-service": "node devnet-service.ts",
-    "test": "node --test"
-  },
-  "dependencies": {
-    "garaga": "1.1.0",
-    "noir-jwt": "0.4.5",
-    "starknet": "10.8.0"
+    "deploy": "node deploy.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.4"
