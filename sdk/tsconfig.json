@@ -4,8 +4,7 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "lib": ["ESNext", "DOM"],
-    // DOM for the redirect and the prover, node for the *.test.ts files (node --test)
-    "types": ["node"],
+    "types": [],
     "allowImportingTsExtensions": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,

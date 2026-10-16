@@ -2,8 +2,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 
-const file = (path: string) =>
-  fileURLToPath(new URL(path, import.meta.url));
+const file = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
 // garaga's bundle imports Node's `crypto` at the top, and its browser mapping sends it to
 // crypto-browserify, which drags in readable-stream and then needs `global` and `process`. Only garaga's
@@ -17,7 +16,7 @@ const stubGaragaCrypto = {
   enforce: "pre" as const,
   resolveId: (id: string, importer?: string) =>
     id === "crypto" && importer?.includes("/garaga/")
-      ? file("src/crypto-shim.ts")
+      ? file("../sdk/src/crypto-shim.ts")
       : undefined,
 };
 
@@ -42,6 +41,6 @@ export default defineConfig({
       // itself, before any plugin's resolveId, and would bake crypto-browserify in
       "garaga",
     ],
-    include: ["@aztec/bb.js > pino", "@aztec/bb.js > buffer"],
+    include: ["sdk > @aztec/bb.js > pino", "sdk > @aztec/bb.js > buffer"],
   },
 });

@@ -1,7 +1,15 @@
-// The 0th SDK: everything a dapp cannot reasonably write itself, namely the
-// redirect, the browser prover (Noir witness, bb.js proof, Garaga calldata)
-// and the relay call, behind one function so a dapp never wires bb.js directly:
-//
-//   const { address, session } = await login({ clientId, deployment, relayUrl, onProgress });
-//
-// `onProgress(step, ms)` reports each step as it finishes, so the dapp owns its UI.
+// The redirect leaves the page, so a login cannot be one call: startLogin goes to the provider,
+// pendingLogin picks the letter back up, finishLogin proves it and lands the account on chain
+
+export { finishLogin, pendingLogin, startLogin } from "./login.ts";
+export type { FinishConfig, LoginConfig, PendingLogin, Step } from "./login.ts";
+
+export { accountAddress, sessionAccount } from "./account.ts";
+export type { Deployment } from "./account.ts";
+
+export type { Circuit, ProofStep } from "./proof.ts";
+// Lets a dapp type its compiled circuit without depending on noir_js directly
+export type { CompiledCircuit } from "@noir-lang/noir_js";
+
+// With accountAddress, a dapp can show the address before the user logs in
+export { identityHash, MAX_SUB_LENGTH } from "./identity.ts";

@@ -1,5 +1,6 @@
 packages:
   - circuits
+  - registry
   - sdk
   - web
   - server

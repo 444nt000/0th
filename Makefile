@@ -1,3 +1,8 @@
+.PHONY: start-devnet stop-devnet restart-devnet down-devnet \
+		logs-devnet check-devnet server sync-keys import-devnet-account \
+		verifier-image gen-verifier deploy-devnet deploy-sepolia deploy-mainnet \
+		clean fclean fmt fmt-check
+
 # DEVNET
 
 DEVNET_COMPOSE = docker compose -f compose.dev.yaml -p 0th-dev
@@ -20,11 +25,27 @@ logs-devnet:
 check-devnet:
 	curl -sS localhost:5050/is_alive
 
-devnet-service:
-	pnpm --filter deploy run devnet-service
+server:
+	RPC_URL=http://127.0.0.1:5050/rpc \
+	ACCOUNT=$$(jq -r .admin contracts/addresses/devnet.json) \
+	ACCOUNT_CLASS_HASH=$$(jq -r .accountClassHash contracts/addresses/devnet.json) \
+	PRIVATE_KEY=$$(curl -sS -X POST localhost:5050/rpc -H 'content-type: application/json' \
+		-d '{"jsonrpc":"2.0","id":1,"method":"devnet_getPredeployedAccounts","params":{}}' \
+		| jq -r '.result[0].private_key') \
+	DEVNET=1 \
+	pnpm --filter server start
+
+sync-keys:
+	RPC_URL=http://127.0.0.1:5050/rpc \
+	REGISTRY=$$(jq -r .registry contracts/addresses/devnet.json) \
+	ACCOUNT=$$(jq -r .admin contracts/addresses/devnet.json) \
+	PRIVATE_KEY=$$(curl -sS -X POST localhost:5050/rpc -H 'content-type: application/json' \
+		-d '{"jsonrpc":"2.0","id":1,"method":"devnet_getPredeployedAccounts","params":{}}' \
+		| jq -r '.result[0].private_key') \
+	pnpm --filter registry run sync
 
 import-devnet-account:
-	mkdir -p contracts/accounts
+	mkdir -p contracts/.sncast
 	-cd contracts && sncast --profile devnet account delete --name devnet-1 --url http://localhost:5050 --yes
 	cd contracts && curl -sS -X POST localhost:5050/rpc -H 'content-type: application/json' \
 		-d '{"jsonrpc":"2.0","id":1,"method":"devnet_getPredeployedAccounts","params":{}}' \
@@ -71,7 +92,7 @@ deploy-devnet deploy-sepolia deploy-mainnet: deploy-%:
 # CLEAN
 
 clean: down-devnet
-	rm -rf contracts/accounts contracts/deployments
+	rm -rf contracts/.sncast contracts/addresses
 	rm -f contracts/verifier/src/*.cairo contracts/verifier/tests/test_contract.cairo contracts/verifier/tests/proof_calldata.txt
 	rm -rf circuits/target contracts/target
 
@@ -81,7 +102,7 @@ fclean: clean
 
 # FORMAT
 
-PRETTIER = circuits/scripts sdk/src web/src server/src deploy
+PRETTIER = circuits/scripts sdk/src web/src server/src registry/src deploy
 
 fmt:
 	cd contracts && scarb fmt
