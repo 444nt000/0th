@@ -1,3 +1,16 @@
 [sncast.devnet]
-network = "devnet"
+url = "http://localhost:5050"
+accounts-file = "accounts/devnet.json"
 account = "devnet-1"
+
+# Add locally, never commit (RPC url carries an API key): sncast finds only this one
+# snfoundry.toml, so a sepolia or mainnet profile goes in this same file.
+#
+# [sncast.sepolia]
+# network = "sepolia"
+# accounts-file = "accounts/sepolia.json"
+# account = "deployer"
+# keystore = "accounts/sepolia.keystore.json"
+#
+# [sncast.sepolia.networks]
+# sepolia = "https://your-rpc-provider.com/v1/YOUR_API_KEY"

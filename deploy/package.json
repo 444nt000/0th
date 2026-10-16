@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "deploy-devnet": "node deploy-devnet.ts",
+    "deploy": "node deploy.ts",
     "e2e-devnet": "node e2e-devnet.ts",
     "devnet-service": "node devnet-service.ts",
     "test": "node --test"
