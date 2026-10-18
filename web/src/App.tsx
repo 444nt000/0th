@@ -26,9 +26,7 @@ const CLIENT_ID =
 const REDIRECT_URI = `${location.origin}/`;
 
 const RPC_URL = "http://127.0.0.1:5050/rpc";
-const RELAY_URL = "http://127.0.0.1:8787/relay";
-// TODO: read it from the dev's salt endpoint, which derives it per user
-const SALT = 12345n;
+const SERVER_URL = "http://127.0.0.1:8787";
 
 const TRANSFER = 1000n;
 // Starknet's fee token, same address on every network
@@ -69,9 +67,8 @@ function App() {
       const { address, session, expiry } = await finishLogin(answer, {
         clientId: CLIENT_ID,
         deployment,
-        relayUrl: RELAY_URL,
+        serverUrl: SERVER_URL,
         circuit,
-        salt: SALT,
         onStep: (step, ms) => say(`${step}: ${(ms / 1000).toFixed(1)}s`),
       });
       say(`address: ${address}`);

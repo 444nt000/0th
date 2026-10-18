@@ -229,12 +229,6 @@ importers:
         specifier: ^26.6.4
         version: 26.6.4
 
-  deploy:
-    devDependencies:
-      '@types/node':
-        specifier: ^26.6.4
-        version: 26.6.4
-
   registry:
     dependencies:
       noir-jwt:
@@ -250,6 +244,12 @@ importers:
       typescript:
         specifier: ~6.0.2
         version: 6.0.3
+
+  scripts:
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.4
+        version: 26.6.4
 
   sdk:
     dependencies:
@@ -278,6 +278,9 @@ importers:
 
   server:
     dependencies:
+      jose:
+        specifier: ^6.2.12
+        version: 6.2.12
       starknet:
         specifier: 10.8.0
         version: 10.8.0(typescript@6.0.3)(zod@4.6.5)
@@ -1023,6 +1026,9 @@ packages:
 
   isarray@2.0.5:
     resolution: {integrity: sha512-xHjhDr3cNBK0BzdUJSPXZntQUx/mwMS5Rw4A7lPJ90XGAO6ISP/ePDNuo0vhqOZU+UD5JoodwCAAoZQd3FeAKw==}
+
+  jose@6.2.12:
+    resolution: {integrity: sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -2216,6 +2222,8 @@ snapshots:
   isarray@1.0.0: {}
 
   isarray@2.0.5: {}
+
+  jose@6.2.12: {}
 
   js-tokens@4.0.0: {}
 

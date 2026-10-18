@@ -4,7 +4,7 @@ import { poseidon3, poseidon8 } from "poseidon-lite";
 const GOOGLE_ISS = "https://accounts.google.com";
 const AUD_FIELDS = 3;
 const MAX_AUD_LENGTH = 31 * AUD_FIELDS;
-export const MAX_SUB_LENGTH = 31;
+const MAX_SUB_LENGTH = 31;
 
 // Cuts text into Fields of 31 bytes, big-endian, zero-padded: 31 is the largest size that always
 // fits a Field

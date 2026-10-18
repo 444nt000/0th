@@ -7,6 +7,9 @@
 
 DEVNET_COMPOSE = docker compose -f compose.dev.yaml -p 0th-dev
 
+DEVNET_SEED = devnet-seed-not-a-secret
+GOOGLE_CLIENT_ID = 16619420523-e9c66plhahqsbj7u4090p1d66iapd4p4.apps.googleusercontent.com
+
 start-devnet:
 	$(DEVNET_COMPOSE) up -d
 
@@ -27,6 +30,8 @@ check-devnet:
 
 server:
 	RPC_URL=http://127.0.0.1:5050/rpc \
+	SEED=$(DEVNET_SEED) \
+	GOOGLE_CLIENT_ID=$(GOOGLE_CLIENT_ID) \
 	ACCOUNT=$$(jq -r .admin contracts/addresses/devnet.json) \
 	ACCOUNT_CLASS_HASH=$$(jq -r .accountClassHash contracts/addresses/devnet.json) \
 	PRIVATE_KEY=$$(curl -sS -X POST localhost:5050/rpc -H 'content-type: application/json' \

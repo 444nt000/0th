@@ -13,7 +13,7 @@ import {
   type ProofStep,
   proveLogin,
 } from "./proof.ts";
-import { relay } from "./server.ts";
+import { fetchSalt, relay } from "./server.ts";
 
 // A day, well under the 30 the account caps a session at
 const SESSION_LENGTH = 24n * 3600n;
@@ -32,11 +32,8 @@ export type LoginConfig = {
 export type FinishConfig = {
   clientId: string;
   deployment: Deployment;
-  // Where the dapp's relayer answers, and pays for the first transaction
-  relayUrl: string;
+  serverUrl: string;
   circuit: Circuit;
-  // Per-user salt from the dapp's salt endpoint, so the address does not follow from `sub` alone
-  salt: bigint;
   onStep?: (step: Step, ms: number) => void;
 };
 
@@ -59,7 +56,7 @@ export const pendingLogin = (): PendingLogin | undefined => readGoogleAnswer();
 
 export async function finishLogin(
   answer: PendingLogin,
-  { clientId, deployment, relayUrl, circuit, salt, onStep }: FinishConfig,
+  { clientId, deployment, serverUrl, circuit, onStep }: FinishConfig,
 ) {
   const { jwt, session, expiry, secret } = answer;
 
@@ -74,7 +71,10 @@ export async function finishLogin(
     loginNonce(session.publicKey, expiry, secret),
   );
 
-  const providerKey = await googleKey(jwt);
+  const [providerKey, salt] = await Promise.all([
+    googleKey(jwt),
+    fetchSalt(serverUrl, jwt),
+  ]);
 
   const { calldata, identity } = await proveLogin(
     circuit,
@@ -94,7 +94,7 @@ export async function finishLogin(
 
   const since = performance.now();
   const relayed = await relay(
-    relayUrl,
+    serverUrl,
     constructorCalldata,
     calldata.map(String),
   );

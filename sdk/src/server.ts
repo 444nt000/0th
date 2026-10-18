@@ -19,7 +19,15 @@ async function post<T>(url: string, input: unknown): Promise<T> {
 
 // Deploys the account and registers the session key in one transaction, paid by the relayer
 export const relay = (
-  relayUrl: string,
+  serverUrl: string,
   constructorCalldata: string[],
   proof: string[],
-) => post<{ address: string }>(relayUrl, { constructorCalldata, proof });
+) =>
+  post<{ address: string }>(`${serverUrl}/relay`, {
+    constructorCalldata,
+    proof,
+  });
+
+// The salt is derived server side, so an address cannot be computed from the claims alone
+export const fetchSalt = async (serverUrl: string, jwt: string) =>
+  BigInt((await post<{ salt: string }>(`${serverUrl}/salt`, { jwt })).salt);

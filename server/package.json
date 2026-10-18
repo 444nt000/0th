@@ -4,9 +4,10 @@
   "license": "GPL-3.0",
   "type": "module",
   "scripts": {
-    "start": "node src/relay.ts"
+    "start": "node src/main.ts"
   },
   "dependencies": {
+    "jose": "^6.2.12",
     "starknet": "10.8.0"
   },
   "devDependencies": {
