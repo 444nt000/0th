@@ -4,6 +4,7 @@ contracts/.sncast/
 
 # build
 target/
+web/dist/
 contracts/.snfoundry_cache/
 contracts/snfoundry_trace/
 contracts/coverage/

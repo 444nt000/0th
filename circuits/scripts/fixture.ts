@@ -1,10 +1,3 @@
-// Builds fake Google letters (JWTs) and writes them as circuit inputs. Tests only.
-//
-// usage: make fixtures
-//   Prover.toml            a valid letter, for `nargo execute` and the verifier proof
-//   Prover.json            the same letter, as JSON: the test RSA key the registry needs (deploy/)
-//   src/tests/fixtures.nr  letters and constants for src/tests/
-
 import crypto from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -27,7 +20,7 @@ const SECRET = 2n;
 
 const SALT = 12345n; // the real one is derived per user
 
-const MAX_DATA_LENGTH = 1024; // same as in src/main.nr
+const MAX_DATA_LENGTH = 768; // same as in src/main.nr
 
 // Same as `pack` in src/main.nr: 31 bytes per Field, padded with 0 bytes
 const pack = (s: string, max: number) => {

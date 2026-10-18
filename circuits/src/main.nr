@@ -4,7 +4,7 @@ use jwt::JWT;
 use poseidon::poseidon::bn254::{hash_3, hash_8};
 
 // Max size of "header.payload" (base64). Fits scope "openid" only
-global MAX_DATA_LENGTH: u32 = 1024;
+global MAX_DATA_LENGTH: u32 = 768;
 global ISS: str<27> = "https://accounts.google.com";
 // Multiples of 31: pack cuts text into 31-byte pieces
 global MAX_AUD_LENGTH: u32 = 93; // Google client ids are ~72 chars

@@ -1,4 +1,4 @@
-.PHONY: start-devnet stop-devnet restart-devnet down-devnet \
+.PHONY: fixtures start-devnet stop-devnet restart-devnet down-devnet \
 		logs-devnet check-devnet server sync-keys import-devnet-account \
 		verifier-image gen-verifier deploy-devnet deploy-sepolia deploy-mainnet \
 		clean fclean fmt fmt-check
@@ -57,6 +57,11 @@ import-devnet-account:
 		| jq -r '.result[0] | "--address", .address, "--private-key", .private_key' \
 		| xargs sncast --profile devnet account import --name devnet-1 --type oz --silent
 
+# CIRCUIT
+
+fixtures:
+	pnpm --filter circuits exec node scripts/fixture.ts
+
 # VERIFIER
 
 SYSTEM = ultra_keccak_zk_honk
@@ -83,7 +88,8 @@ gen-verifier: verifier-image
 		cp /tmp/verifier/src/*.cairo ../contracts/verifier/src/ && \
 		cp /tmp/verifier/tests/test_contract.cairo ../contracts/verifier/tests/ && \
 		garaga calldata --system $(SYSTEM) --vk target/vk --proof target/proof \
-			--public-inputs target/public_inputs --format snforge --output-path ../contracts/verifier/tests \
+			--public-inputs target/public_inputs --format snforge --output-path ../contracts/verifier/tests && \
+		cd ../contracts/verifier && scarb fmt \
 	'
 
 # CONTRACTS
@@ -98,7 +104,6 @@ deploy-devnet deploy-sepolia deploy-mainnet: deploy-%:
 
 clean: down-devnet
 	rm -rf contracts/.sncast deployments
-	rm -f contracts/verifier/src/*.cairo contracts/verifier/tests/test_contract.cairo contracts/verifier/tests/proof_calldata.txt
 	rm -rf circuits/target contracts/target
 
 fclean: clean

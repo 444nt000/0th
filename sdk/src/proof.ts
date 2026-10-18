@@ -4,7 +4,7 @@ import { getZKHonkCallData, init as initGaraga } from "garaga";
 import { generateInputs } from "noir-jwt";
 
 // Same bound as MAX_DATA_LENGTH in circuits/src/main.nr. A Google letter is about 658 bytes
-const MAX_DATA_LENGTH = 1024;
+const MAX_DATA_LENGTH = 768;
 
 // Index of identity_hash among the circuit's public inputs
 const IDENTITY_INPUT = 20;
