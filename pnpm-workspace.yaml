@@ -4,7 +4,7 @@ packages:
   - sdk
   - web
   - server
-  - deploy
+  - scripts
 
 allowBuilds:
   msgpackr-extract: false

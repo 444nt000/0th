@@ -13,7 +13,7 @@ import {
 } from "sdk";
 
 import program from "../../circuits/target/login.json";
-import deployment from "../../contracts/addresses/devnet.json";
+import deployment from "../../deployments/devnet.json";
 // Inlined as a data URL, so the key costs no request
 import vkUrl from "../../circuits/target/vk?inline";
 

@@ -32,8 +32,8 @@ server:
 	RPC_URL=http://127.0.0.1:5050/rpc \
 	SEED=$(DEVNET_SEED) \
 	GOOGLE_CLIENT_ID=$(GOOGLE_CLIENT_ID) \
-	ACCOUNT=$$(jq -r .admin contracts/addresses/devnet.json) \
-	ACCOUNT_CLASS_HASH=$$(jq -r .accountClassHash contracts/addresses/devnet.json) \
+	ACCOUNT=$$(jq -r .admin deployments/devnet.json) \
+	ACCOUNT_CLASS_HASH=$$(jq -r .accountClassHash deployments/devnet.json) \
 	PRIVATE_KEY=$$(curl -sS -X POST localhost:5050/rpc -H 'content-type: application/json' \
 		-d '{"jsonrpc":"2.0","id":1,"method":"devnet_getPredeployedAccounts","params":{}}' \
 		| jq -r '.result[0].private_key') \
@@ -42,8 +42,8 @@ server:
 
 sync-keys:
 	RPC_URL=http://127.0.0.1:5050/rpc \
-	REGISTRY=$$(jq -r .registry contracts/addresses/devnet.json) \
-	ACCOUNT=$$(jq -r .admin contracts/addresses/devnet.json) \
+	REGISTRY=$$(jq -r .registry deployments/devnet.json) \
+	ACCOUNT=$$(jq -r .admin deployments/devnet.json) \
 	PRIVATE_KEY=$$(curl -sS -X POST localhost:5050/rpc -H 'content-type: application/json' \
 		-d '{"jsonrpc":"2.0","id":1,"method":"devnet_getPredeployedAccounts","params":{}}' \
 		| jq -r '.result[0].private_key') \
@@ -91,13 +91,13 @@ gen-verifier: verifier-image
 # deploy single contract with contract=<verifier|registry|account>
 deploy-devnet deploy-sepolia deploy-mainnet: deploy-%:
 	cd contracts && scarb build
-	pnpm --filter deploy run deploy $* $(contract)
+	pnpm --filter scripts run deploy $* $(contract)
 
 
 # CLEAN
 
 clean: down-devnet
-	rm -rf contracts/.sncast contracts/addresses
+	rm -rf contracts/.sncast deployments
 	rm -f contracts/verifier/src/*.cairo contracts/verifier/tests/test_contract.cairo contracts/verifier/tests/proof_calldata.txt
 	rm -rf circuits/target contracts/target
 
@@ -107,7 +107,7 @@ fclean: clean
 
 # FORMAT
 
-PRETTIER = circuits/scripts sdk/src web/src server/src registry/src deploy
+PRETTIER = circuits/scripts sdk/src web/src server/src registry/src scripts
 
 fmt:
 	cd contracts && scarb fmt

@@ -4,6 +4,9 @@ import { fileURLToPath } from "node:url";
 
 const NETWORKS = ["devnet", "sepolia", "mainnet"];
 const CONTRACTS_DIR = fileURLToPath(new URL("../contracts/", import.meta.url));
+const DEPLOYMENTS_DIR = fileURLToPath(
+  new URL("../deployments/", import.meta.url),
+);
 
 // Runs sncast and parses its --json output
 function sncast(...args: string[]): Record<string, string> & { raw: string } {
@@ -145,13 +148,13 @@ for (const [pkg, contract] of Object.entries(CONTRACTS)) {
 }
 
 // Merged with the existing json deployment file, so deploying one contract leaves the others in it untouched
-const file = `${CONTRACTS_DIR}addresses/${network}.json`;
+const file = `${DEPLOYMENTS_DIR}${network}.json`;
 const existing = fs.existsSync(file)
   ? JSON.parse(fs.readFileSync(file, "utf8"))
   : {};
 const merged = JSON.stringify({ ...existing, ...deployed }, null, 2) + "\n";
 if (merged !== JSON.stringify(existing, null, 2) + "\n") {
-  fs.mkdirSync(`${CONTRACTS_DIR}addresses`, { recursive: true });
+  fs.mkdirSync(DEPLOYMENTS_DIR, { recursive: true });
   fs.writeFileSync(file, merged);
   console.log(`Written to ${file}`);
 }
