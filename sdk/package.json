@@ -4,7 +4,8 @@
   "license": "GPL-3.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./vite": "./src/vite.ts"
   },
   "dependencies": {
     "@aztec/bb.js": "3.0.0-nightly.20251104",
@@ -15,6 +16,7 @@
     "starknet": "10.8.0"
   },
   "devDependencies": {
-    "typescript": "~6.0.2"
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0"
   }
 }
