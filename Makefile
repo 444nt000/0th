@@ -1,5 +1,5 @@
 .PHONY: fixtures start-devnet stop-devnet restart-devnet down-devnet \
-		logs-devnet check-devnet server sync-keys import-devnet-account \
+		logs-devnet check-devnet server registry import-devnet-account \
 		verifier-image gen-verifier deploy-devnet deploy-sepolia deploy-mainnet \
 		clean fclean fmt fmt-check
 
@@ -40,14 +40,15 @@ server:
 	DEVNET=1 \
 	pnpm --filter server start
 
-sync-keys:
-	RPC_URL=http://127.0.0.1:5050/rpc \
+REGISTRY_ENV = RPC_URL=http://127.0.0.1:5050/rpc \
 	REGISTRY=$$(jq -r .registry deployments/devnet.json) \
 	ACCOUNT=$$(jq -r .admin deployments/devnet.json) \
 	PRIVATE_KEY=$$(curl -sS -X POST localhost:5050/rpc -H 'content-type: application/json' \
 		-d '{"jsonrpc":"2.0","id":1,"method":"devnet_getPredeployedAccounts","params":{}}' \
-		| jq -r '.result[0].private_key') \
-	pnpm --filter registry run sync
+		| jq -r '.result[0].private_key')
+
+registry:
+	$(REGISTRY_ENV) pnpm --filter registry run sync
 
 import-devnet-account:
 	mkdir -p contracts/.sncast

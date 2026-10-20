@@ -1,7 +1,9 @@
+pub const MAX_AGE: u64 = 30 * 24 * 3600; // a key not renewed for 30 days stops being valid
+
 #[starknet::interface]
 pub trait IKeyRegistry<TContractState> {
     fn is_key(self: @TContractState, modulus: Span<u256>) -> bool;
-    fn add_key(ref self: TContractState, modulus: Span<u256>);
+    fn renew_key(ref self: TContractState, modulus: Span<u256>);
     fn remove_key(ref self: TContractState, modulus: Span<u256>);
 }
 
@@ -15,8 +17,9 @@ pub mod Registry {
     use openzeppelin_introspection::src5::SRC5Component;
 
     // Starknet
-    use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::{ContractAddress, get_block_timestamp};
+    use super::MAX_AGE;
 
     pub const ADMIN_ROLE: felt252 = DEFAULT_ADMIN_ROLE;
 
@@ -34,7 +37,7 @@ pub mod Registry {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        keys: Map<felt252, bool> // poseidon hash of the modulus limbs
+        keys: Map<felt252, u64> // poseidon hash of the modulus limbs to its last renewal time
     }
 
     #[event]
@@ -55,17 +58,18 @@ pub mod Registry {
     #[abi(embed_v0)]
     impl KeyRegistryImpl of super::IKeyRegistry<ContractState> {
         fn is_key(self: @ContractState, modulus: Span<u256>) -> bool {
-            self.keys.read(key_id(modulus))
+            let seen = self.keys.read(key_id(modulus));
+            seen != 0 && seen + MAX_AGE > get_block_timestamp()
         }
 
-        fn add_key(ref self: ContractState, modulus: Span<u256>) {
+        fn renew_key(ref self: ContractState, modulus: Span<u256>) {
             self.accesscontrol.assert_only_role(ADMIN_ROLE);
-            self.keys.write(key_id(modulus), true);
+            self.keys.write(key_id(modulus), get_block_timestamp());
         }
 
         fn remove_key(ref self: ContractState, modulus: Span<u256>) {
             self.accesscontrol.assert_only_role(ADMIN_ROLE);
-            self.keys.write(key_id(modulus), false);
+            self.keys.write(key_id(modulus), 0);
         }
     }
 

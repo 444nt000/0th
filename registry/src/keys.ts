@@ -44,30 +44,17 @@ const keyCalldata = (limbs: string[]) => [
   ...limbs.flatMap((limb) => [limb, "0"]),
 ];
 
-// Keys already on chain are skipped, so a rotation costs one transaction for the new key alone
-export async function addKeys(account: Account, registry: string) {
+// Renews every key Google publishes today, in one transaction.
+// A key Google dropped is not removed but expires on its own after 30 days
+export async function renewKeys(account: Account, registry: string) {
   const keys = await googleKeys();
-  const known = await Promise.all(
-    keys.map(async (limbs) => {
-      const [is] = await account.provider.callContract({
-        contractAddress: registry,
-        entrypoint: "is_key",
-        calldata: keyCalldata(limbs),
-      });
-      return BigInt(is!) !== 0n;
-    }),
+  const { transaction_hash } = await account.execute(
+    keys.map((limbs) => ({
+      contractAddress: registry,
+      entrypoint: "renew_key",
+      calldata: keyCalldata(limbs),
+    })),
   );
-
-  const missing = keys.filter((_, i) => !known[i]);
-  if (missing.length) {
-    const { transaction_hash } = await account.execute(
-      missing.map((limbs) => ({
-        contractAddress: registry,
-        entrypoint: "add_key",
-        calldata: keyCalldata(limbs),
-      })),
-    );
-    await account.provider.waitForTransaction(transaction_hash);
-  }
-  return missing;
+  await account.provider.waitForTransaction(transaction_hash);
+  return keys;
 }

@@ -26,7 +26,7 @@ pub fn setup(
     if with_key {
         let inputs = public_inputs(load_proof().span());
         start_cheat_caller_address(registry.contract_address, ADMIN);
-        registry.add_key(inputs.span().slice(0, MODULUS_LIMBS));
+        registry.renew_key(inputs.span().slice(0, MODULUS_LIMBS));
         stop_cheat_caller_address(registry.contract_address);
     }
 
