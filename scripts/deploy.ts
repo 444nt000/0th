@@ -126,13 +126,13 @@ if (only && !(only in CONTRACTS))
   );
 
 console.log(`Deploying to ${network} (admin: ${admin})`);
-const deployed: Record<string, string> = { admin };
+const deployed: Record<string, string> = { ADMIN: admin };
 
 for (const [pkg, contract] of Object.entries(CONTRACTS)) {
   if (only && only !== pkg) continue;
 
   const declared = declare(contract.contractName, pkg);
-  deployed[`${pkg}ClassHash`] = declared.classHash;
+  deployed[`${pkg.toUpperCase()}_CLASS_HASH`] = declared.classHash;
 
   if ("declareOnly" in contract) {
     console.log(`${pkg} class ${declared.log}`);
@@ -143,18 +143,25 @@ for (const [pkg, contract] of Object.entries(CONTRACTS)) {
     declared.classHash,
     contract.constructorCalldata,
   );
-  deployed[pkg] = instance.address;
+  deployed[pkg.toUpperCase()] = instance.address;
   console.log(`${pkg} ${instance.log}\n    class ${declared.log}`);
 }
 
-// Merged with the existing json deployment file, so deploying one contract leaves the others in it untouched
-const file = `${DEPLOYMENTS_DIR}${network}.json`;
-const existing = fs.existsSync(file)
-  ? JSON.parse(fs.readFileSync(file, "utf8"))
-  : {};
-const merged = JSON.stringify({ ...existing, ...deployed }, null, 2) + "\n";
-if (merged !== JSON.stringify(existing, null, 2) + "\n") {
-  fs.mkdirSync(DEPLOYMENTS_DIR, { recursive: true });
-  fs.writeFileSync(file, merged);
-  console.log(`Written to ${file}`);
-}
+const file = `${DEPLOYMENTS_DIR}${network}.env`;
+const existing: Record<string, string> = {};
+if (fs.existsSync(file))
+  for (const line of fs.readFileSync(file, "utf8").split("\n")) {
+    const eq = line.indexOf("=");
+    if (eq > 0 && !line.startsWith("#"))
+      existing[line.slice(0, eq)] = line.slice(eq + 1);
+  }
+const record = { ...existing, ...deployed };
+fs.mkdirSync(DEPLOYMENTS_DIR, { recursive: true });
+fs.writeFileSync(
+  file,
+  "# Written by the deploy, read by the services and the demo. Edit the deploy, not this file\n" +
+    Object.entries(record)
+      .map(([name, value]) => `${name}=${value}\n`)
+      .join(""),
+);
+console.log(`Written to ${file}`);

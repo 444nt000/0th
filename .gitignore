@@ -1,6 +1,9 @@
 .env
-docs/
-contracts/.sncast/
+.env.*
+!.env.example
+!.env.devnet
+contracts/.sncast/*
+!contracts/.sncast/devnet.json
 
 # build
 target/
@@ -11,4 +14,4 @@ contracts/coverage/
 contracts/profile/
 node_modules/
 
-deployments/devnet.json
+deployments/devnet.env

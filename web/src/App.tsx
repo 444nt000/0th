@@ -12,24 +12,35 @@ import {
   startLogin,
   type Circuit,
   type CompiledCircuit,
+  type Deployment,
   type StoredSession,
 } from "sdk";
 
 import program from "../../circuits/target/login.json";
-import deployment from "../../deployments/devnet.json";
 // Inlined as a data URL, so the key costs no request
 import vkUrl from "../../circuits/target/vk?inline";
 
-// TODO: drop the fallback and require VITE_GOOGLE_CLIENT_ID
-const CLIENT_ID =
-  import.meta.env.VITE_GOOGLE_CLIENT_ID ??
-  "16619420523-e9c66plhahqsbj7u4090p1d66iapd4p4.apps.googleusercontent.com";
+// Vite inlines import.meta.env at build time, so an unset variable is undefined in the bundle
+function need(name: string) {
+  const value = import.meta.env[name];
+  if (!value) throw new Error(`${name} is not set`);
+  return value;
+}
+
+const CLIENT_ID = need("VITE_GOOGLE_CLIENT_ID");
 // Must match the client id's registered URI byte for byte, trailing slash included, or Google
 // answers 400 redirect_uri_mismatch. Not location.pathname, so a deep link still sends this value
 const REDIRECT_URI = `${location.origin}/`;
 
-const RPC_URL = "http://127.0.0.1:5050/rpc";
-const SERVER_URL = "http://127.0.0.1:8787";
+const RPC_URL = need("VITE_RPC_URL");
+const SERVER_URL = need("VITE_SERVER_URL");
+
+const deployment: Deployment = {
+  admin: need("VITE_ADMIN"),
+  registry: need("VITE_REGISTRY"),
+  verifier: need("VITE_VERIFIER"),
+  accountClassHash: need("VITE_ACCOUNT_CLASS_HASH"),
+};
 
 const TRANSFER = 1000n;
 // Starknet's fee token, same address on every network

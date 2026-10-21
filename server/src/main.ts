@@ -12,8 +12,8 @@ const clientId = need("GOOGLE_CLIENT_ID");
 const relayConfig = {
   relayer: new Account({
     provider: new RpcProvider({ nodeUrl: rpcUrl }),
-    address: need("ACCOUNT"),
-    signer: need("PRIVATE_KEY"),
+    address: need("RELAYER_ACCOUNT"),
+    signer: need("RELAYER_PRIVATE_KEY"),
   }),
   accountClassHash: need("ACCOUNT_CLASS_HASH"),
   nodeUrl: rpcUrl,

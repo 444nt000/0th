@@ -1,14 +1,12 @@
 .PHONY: fixtures start-devnet stop-devnet restart-devnet down-devnet \
-		logs-devnet check-devnet server registry import-devnet-account \
-		verifier-image gen-verifier deploy-devnet deploy-sepolia deploy-mainnet \
-		clean fclean fmt fmt-check
+		logs-devnet check-devnet server registry web \
+		verifier-image gen-verifier deploy clean fclean fmt fmt-check
+
+NETWORK ?= devnet
 
 # DEVNET
 
 DEVNET_COMPOSE = docker compose -f compose.dev.yaml -p 0th-dev
-
-DEVNET_SEED = devnet-seed-not-a-secret
-GOOGLE_CLIENT_ID = 16619420523-e9c66plhahqsbj7u4090p1d66iapd4p4.apps.googleusercontent.com
 
 start-devnet:
 	$(DEVNET_COMPOSE) up -d
@@ -28,35 +26,27 @@ logs-devnet:
 check-devnet:
 	curl -sS localhost:5050/is_alive
 
+# SERVICES
+
+-include deployments/$(NETWORK).env
+-include .env.$(NETWORK)
+export
+
+VITE_RPC_URL ?= $(RPC_URL)
+VITE_GOOGLE_CLIENT_ID ?= $(GOOGLE_CLIENT_ID)
+VITE_ADMIN ?= $(ADMIN)
+VITE_REGISTRY ?= $(REGISTRY)
+VITE_VERIFIER ?= $(VERIFIER)
+VITE_ACCOUNT_CLASS_HASH ?= $(ACCOUNT_CLASS_HASH)
+
 server:
-	RPC_URL=http://127.0.0.1:5050/rpc \
-	SEED=$(DEVNET_SEED) \
-	GOOGLE_CLIENT_ID=$(GOOGLE_CLIENT_ID) \
-	ACCOUNT=$$(jq -r .admin deployments/devnet.json) \
-	ACCOUNT_CLASS_HASH=$$(jq -r .accountClassHash deployments/devnet.json) \
-	PRIVATE_KEY=$$(curl -sS -X POST localhost:5050/rpc -H 'content-type: application/json' \
-		-d '{"jsonrpc":"2.0","id":1,"method":"devnet_getPredeployedAccounts","params":{}}' \
-		| jq -r '.result[0].private_key') \
-	DEVNET=1 \
 	pnpm --filter server start
 
-REGISTRY_ENV = RPC_URL=http://127.0.0.1:5050/rpc \
-	REGISTRY=$$(jq -r .registry deployments/devnet.json) \
-	ACCOUNT=$$(jq -r .admin deployments/devnet.json) \
-	PRIVATE_KEY=$$(curl -sS -X POST localhost:5050/rpc -H 'content-type: application/json' \
-		-d '{"jsonrpc":"2.0","id":1,"method":"devnet_getPredeployedAccounts","params":{}}' \
-		| jq -r '.result[0].private_key')
-
 registry:
-	$(REGISTRY_ENV) pnpm --filter registry run sync
+	pnpm --filter registry run sync
 
-import-devnet-account:
-	mkdir -p contracts/.sncast
-	-cd contracts && sncast --profile devnet account delete --name devnet-1 --url http://localhost:5050 --yes
-	cd contracts && curl -sS -X POST localhost:5050/rpc -H 'content-type: application/json' \
-		-d '{"jsonrpc":"2.0","id":1,"method":"devnet_getPredeployedAccounts","params":{}}' \
-		| jq -r '.result[0] | "--address", .address, "--private-key", .private_key' \
-		| xargs sncast --profile devnet account import --name devnet-1 --type oz --silent
+web:
+	pnpm --filter web dev
 
 # CIRCUIT
 
@@ -95,18 +85,17 @@ gen-verifier: verifier-image
 
 # CONTRACTS
 
-# deploy single contract with contract=<verifier|registry|account>
-deploy-devnet deploy-sepolia deploy-mainnet: deploy-%:
+# make deploy NETWORK=<devnet|sepolia|mainnet>, one contract alone with contract=<verifier|registry|account>
+deploy:
 	cd contracts && scarb build
-	pnpm --filter scripts run deploy $* $(contract)
+	pnpm --filter scripts run deploy $(NETWORK) $(contract)
 
 
 # CLEAN
 
 clean: down-devnet
-	rm -rf contracts/.sncast
-	rm -rf circuits/target contracts/target
-	rm -f deployments/devnet.json
+	rm -rf circuits/target contracts/target web/dist
+	rm -f deployments/devnet.env
 
 fclean: clean
 	docker rmi $(VERIFIER_IMAGE) 2>/dev/null || true

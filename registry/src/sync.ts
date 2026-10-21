@@ -1,4 +1,4 @@
-// PRIVATE_KEY holds the admin role, so it can register its own RSA key and sign a letter for any user.
+// REGISTRY_ADMIN_PRIVATE_KEY holds the admin role, so it can register its own RSA key and sign a letter for any user.
 // Devnet and testnet only, until zkTLS makes the write permissionless
 
 import { Account, RpcProvider, logger } from "starknet";
@@ -17,8 +17,8 @@ const need = (name: string) => {
 
 const account = new Account({
   provider: new RpcProvider({ nodeUrl: need("RPC_URL") }),
-  address: need("ACCOUNT"),
-  signer: need("PRIVATE_KEY"),
+  address: need("REGISTRY_ADMIN_ACCOUNT"),
+  signer: need("REGISTRY_ADMIN_PRIVATE_KEY"),
 });
 const registry = need("REGISTRY");
 
