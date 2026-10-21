@@ -14,6 +14,7 @@ import {
   proveLogin,
 } from "./proof.ts";
 import { fetchSalt, relay } from "./server.ts";
+import { storeSession } from "./session.ts";
 
 // A day, well under the 30 the account caps a session at
 const SESSION_LENGTH = 24n * 3600n;
@@ -103,5 +104,6 @@ export async function finishLogin(
     throw new Error(`relayer deployed ${relayed.address}, not ${address}`);
   onStep?.("relay", performance.now() - since);
 
+  storeSession({ address, session, expiry });
   return { address, session, expiry };
 }

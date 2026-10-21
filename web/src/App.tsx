@@ -4,12 +4,15 @@ import { createSignal, onMount } from "solid-js";
 import { render } from "solid-js/web";
 import { CallData, RpcProvider, cairo, type Call } from "starknet";
 import {
+  clearSession,
   finishLogin,
   pendingLogin,
+  resumeSession,
   sessionAccount,
   startLogin,
   type Circuit,
   type CompiledCircuit,
+  type StoredSession,
 } from "sdk";
 
 import program from "../../circuits/target/login.json";
@@ -53,9 +56,37 @@ function App() {
     startLogin({ clientId: CLIENT_ID, redirectUri: REDIRECT_URI });
   }
 
-  // Google sends the user back with the letter in the URL, so this runs at mount
+  async function spend({ address, session, expiry }: StoredSession) {
+    say(`address: ${address}`);
+    say(`session until: ${new Date(Number(expiry) * 1000).toISOString()}`);
+
+    const account = sessionAccount(
+      new RpcProvider({ nodeUrl: RPC_URL }),
+      address,
+      session.privateKey,
+    );
+    const { transaction_hash } = await account.execute([
+      transfer(deployment.admin, TRANSFER),
+    ]);
+    say(`transfer signed by the session key: ${transaction_hash}`);
+  }
+
+  function signOut() {
+    clearSession();
+    setLog("");
+    say("signed out");
+  }
+
+  // Runs at mount: the user is back from Google, or already has a session
   async function resume() {
     try {
+      const kept = resumeSession();
+      if (kept) {
+        setLog("");
+        await spend(kept);
+        return;
+      }
+
       const answer = pendingLogin();
       if (!answer) return;
       setLog("");
@@ -64,25 +95,15 @@ function App() {
         `threads: ${crossOriginIsolated ? navigator.hardwareConcurrency : 1}`,
       );
 
-      const { address, session, expiry } = await finishLogin(answer, {
-        clientId: CLIENT_ID,
-        deployment,
-        serverUrl: SERVER_URL,
-        circuit,
-        onStep: (step, ms) => say(`${step}: ${(ms / 1000).toFixed(1)}s`),
-      });
-      say(`address: ${address}`);
-      say(`session until: ${new Date(Number(expiry) * 1000).toISOString()}`);
-
-      const account = sessionAccount(
-        new RpcProvider({ nodeUrl: RPC_URL }),
-        address,
-        session.privateKey,
+      await spend(
+        await finishLogin(answer, {
+          clientId: CLIENT_ID,
+          deployment,
+          serverUrl: SERVER_URL,
+          circuit,
+          onStep: (step, ms) => say(`${step}: ${(ms / 1000).toFixed(1)}s`),
+        }),
       );
-      const { transaction_hash } = await account.execute([
-        transfer(deployment.admin, TRANSFER),
-      ]);
-      say(`transfer signed by the session key: ${transaction_hash}`);
     } catch (e) {
       say(`error: ${e}`);
       console.error(e);
@@ -94,6 +115,7 @@ function App() {
     <main>
       <h1>0th</h1>
       <button onClick={signIn}>Sign in with Google</button>
+      <button onClick={signOut}>Sign out</button>
       <pre>{log()}</pre>
     </main>
   );
