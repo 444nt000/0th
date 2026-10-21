@@ -11,5 +11,4 @@ contracts/coverage/
 contracts/profile/
 node_modules/
 
-# redeployed per machine, unlike the real networks
 deployments/devnet.json

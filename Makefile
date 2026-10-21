@@ -104,8 +104,9 @@ deploy-devnet deploy-sepolia deploy-mainnet: deploy-%:
 # CLEAN
 
 clean: down-devnet
-	rm -rf contracts/.sncast deployments
+	rm -rf contracts/.sncast
 	rm -rf circuits/target contracts/target
+	rm -f deployments/devnet.json
 
 fclean: clean
 	docker rmi $(VERIFIER_IMAGE) 2>/dev/null || true
