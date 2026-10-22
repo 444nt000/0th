@@ -4,7 +4,8 @@
   "license": "GPL-3.0",
   "type": "module",
   "scripts": {
-    "sync": "node src/sync.ts"
+    "sync": "node src/sync.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "noir-jwt": "0.4.5",

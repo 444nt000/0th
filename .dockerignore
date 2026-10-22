@@ -1,0 +1,17 @@
+*
+
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+
+!sdk
+!web
+!server
+!registry
+
+!circuits/package.json
+!circuits/target/login.json
+!circuits/target/vk
+
+*/node_modules
+web/dist

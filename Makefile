@@ -1,30 +1,34 @@
-.PHONY: fixtures start-devnet stop-devnet restart-devnet down-devnet \
-		logs-devnet check-devnet server registry web \
-		verifier-image gen-verifier deploy clean fclean fmt fmt-check
+.PHONY: fixtures start-devnet stop-devnet server registry web up down logs \
+		verifier-image gen-verifier deploy test typecheck clean fclean fmt fmt-check
 
 NETWORK ?= devnet
 
-# DEVNET
+# COMPOSE
 
-DEVNET_COMPOSE = docker compose -f compose.dev.yaml -p 0th-dev
+COMPOSE = docker compose --env-file .env.$(NETWORK) --env-file deployments/$(NETWORK).env
+DEVNET_COMPOSE = $(COMPOSE) --profile devnet
+
+SERVICES = server registry web
+
+deployments/$(NETWORK).env:
+	mkdir -p deployments && touch $@
+
+up down logs start-devnet stop-devnet: deployments/$(NETWORK).env
 
 start-devnet:
-	$(DEVNET_COMPOSE) up -d
+	$(DEVNET_COMPOSE) up -d devnet
 
 stop-devnet:
-	$(DEVNET_COMPOSE) stop
+	$(DEVNET_COMPOSE) stop devnet
 
-restart-devnet:
-	$(DEVNET_COMPOSE) restart
+up:
+	$(COMPOSE) up -d --build $(SERVICES)
 
-down-devnet:
-	$(DEVNET_COMPOSE) down
+down:
+	$(COMPOSE) $(if $(filter devnet,$(NETWORK)),--profile devnet) down
 
-logs-devnet:
-	$(DEVNET_COMPOSE) logs -f
-
-check-devnet:
-	curl -sS localhost:5050/is_alive
+logs:
+	$(COMPOSE) logs -f
 
 # SERVICES
 
@@ -91,9 +95,18 @@ deploy:
 	pnpm --filter scripts run deploy $(NETWORK) $(contract)
 
 
+# TEST
+
+test:
+	cd contracts && snforge test
+	cd circuits && nargo test
+
+typecheck:
+	pnpm --filter sdk --filter web --filter server --filter registry run typecheck
+
 # CLEAN
 
-clean: down-devnet
+clean: down
 	rm -rf circuits/target contracts/target web/dist
 	rm -f deployments/devnet.env
 
